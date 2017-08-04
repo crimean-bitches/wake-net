@@ -7,9 +7,10 @@ Wake Net TODO
 - [X] Correct connect / disconnet handling
 - [X] Stable message exchange
 - [X] Proxy's
+- [ ] Custom logger
 - [ ] Global refactor (SOLID)
 - [ ] Network discovery support for server
-- [ ] Buffers control
+- [ ] Buffers control and reducing memory overhead
 - [ ] Profiling and optimizations
 
 Contributing
