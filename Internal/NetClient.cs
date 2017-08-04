@@ -50,12 +50,7 @@ namespace WakeNet.Internal
             byte error;
             mConnection = NetworkTransport.Connect(mSocket, ip, port, 0, out error);
 
-            if (NetUtils.IsNetworkError(error))
-            {
-                NetUtils.Log("NetClient::Connect( " + ip + " , " + port + " ) Failed with reason '" +
-                          NetUtils.GetNetworkError(error) + "'.");
-                return false;
-            }
+            if (NetUtils.IsNetworkError(this, error)) return false;
 
             mServerIP = ip;
             mPort = port;
@@ -70,7 +65,7 @@ namespace WakeNet.Internal
         {
             if (!mIsConnected)
             {
-                NetUtils.Log("NetClient::Disconnect() Failed with reason 'Not connected to server!");
+                NetUtils.LogWarning("NetClient::Disconnect() Failed with reason 'Not connected to server!");
                 return false;
             }
 
@@ -78,11 +73,8 @@ namespace WakeNet.Internal
 
             NetworkTransport.Disconnect(mSocket, mConnection, out error);
 
-            if (NetUtils.IsNetworkError(error))
-            {
-                NetUtils.Log("NetClient::Disconnect() Failed with reason '" + NetUtils.GetNetworkError(error) + "'.");
+            if (NetUtils.IsNetworkError(this, error))
                 return false;
-            }
 
             mIsConnected = false;
 
@@ -98,12 +90,7 @@ namespace WakeNet.Internal
             byte error;
             NetworkTransport.Send(mSocket, mConnection, channel, data, data.Length, out error);
 
-            if (NetUtils.IsNetworkError(error))
-            {
-                NetUtils.Log("NetClient::SendStream(" + data.Length + ") Failed with reason '" +
-                          NetUtils.GetNetworkError(error) + "'.");
-                return false;
-            }
+            NetUtils.IsNetworkError(this, error);
 
             return true;
         }

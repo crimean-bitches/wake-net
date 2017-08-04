@@ -21,7 +21,6 @@ namespace WakeNet.Internal
         {
             get { return new ReadOnlyCollection<NetServer>(_servers); }
         }
-
         public static ReadOnlyCollection<NetClient> Clients
         {
             get { return new ReadOnlyCollection<NetClient>(_clients); }
@@ -29,14 +28,16 @@ namespace WakeNet.Internal
 
         // Lists to hold our clients
         private static readonly List<NetServer> _servers = new List<NetServer>();
-
         private static readonly List<NetClient> _clients = new List<NetClient>();
+        private static readonly List<NetBroadcast> _broadcasts = new List<NetBroadcast>();
 
         /// <summary>
         ///     Initialize our low level network APIs.
         /// </summary>
         public static void Init()
         {
+            if(Initialized) return;
+            
             NetworkTransport.Init(Config.GetClobalConfig());
             Initialized = true;
 
@@ -108,8 +109,7 @@ namespace WakeNet.Internal
         {
             if (!Initialized)
             {
-                NetUtils.Log(
-                    "NetManager::CreateServer( ... ) - NetManager was not initialized. Did you forget to call NetManager.Init()?");
+                NetUtils.Log("NetManager::CreateClient( ... ) - NetManager was not initialized. Did you forget to call NetManager.Init()?");
                 return null;
             }
 
@@ -128,7 +128,7 @@ namespace WakeNet.Internal
         /// <param name="c">NetClient object to destroy</param>
         public static bool DestroyClient(NetClient c)
         {
-            if (_clients.Contains(c) == false)
+            if (!_clients.Contains(c))
             {
                 NetUtils.Log("NetManager::DestroyClient( " + c.mSocket + ") - Client does not exist!");
                 return false;
@@ -139,6 +139,39 @@ namespace WakeNet.Internal
             NetworkTransport.RemoveHost(c.mSocket);
 
             _clients.Remove(c);
+
+            return true;
+        }
+
+        public static NetBroadcast CreateBroadcast(int port, int key, int version, int subversion)
+        {
+            if (!Initialized)
+            {
+                NetUtils.Log("NetManager::CreateClient( ... ) - NetManager was not initialized. Did you forget to call NetManager.Init()?");
+                return null;
+            }
+
+            var b = new NetBroadcast(port, key, version, subversion);
+
+            if (_broadcasts.Contains(b) != true)
+                _broadcasts.Add(b);
+
+            return b;
+        }
+
+        public static bool DestroyBroadcast(NetBroadcast b)
+        {
+            if (!_broadcasts.Contains(b))
+            {
+                NetUtils.Log("NetManager::DestroyBroadcast( " + b.mSocket + ") - Broadcast does not exist!");
+                return false;
+            }
+
+            b.Shutdown();
+
+            NetworkTransport.RemoveHost(b.mSocket);
+
+            _broadcasts.Remove(b);
 
             return true;
         }
@@ -172,16 +205,24 @@ namespace WakeNet.Internal
                 i = _servers.FindIndex(x => x.mSocket == recHostId);
                 if (i != -1) _servers[i].OnMessage(networkEvent, connectionId, channelId, buffer, dataSize);
 
+                // Route message to our broadcast delegate
+                i = _broadcasts.FindIndex(x => x.mSocket == recHostId);
+                if (i != -1)
+                {
+                    if(_broadcasts[i].mIsListening)
+                        _broadcasts[i].OnMessage(networkEvent, connectionId, channelId, buffer, dataSize);
+                }
+
                 // Route message to our client delegate
                 // Client Connect Event
                 i = _clients.FindIndex(c => c.mSocket.Equals(recHostId));
-                if (i != -1) _clients[i].OnMessage(networkEvent, connectionId, channelId, buffer, dataSize);
+                if (i != -1 && _clients[i].OnMessage != null) _clients[i].OnMessage(networkEvent, connectionId, channelId, buffer, dataSize);
 
                 // invoke handler which allows to send all waiting data on server and client sides
                 for (int c = 0; c < _clients.Count; c++)
-                    _clients[c].OnSend();
+                    if(_clients[c].OnSend != null) _clients[c].OnSend();
                 for (int s = 0; s < _servers.Count; s++)
-                    _servers[s].OnSend();
+                    if (_servers[s].OnSend != null) _servers[s].OnSend();
 
                 switch (networkEvent)
                 {
@@ -232,6 +273,16 @@ namespace WakeNet.Internal
                         i = _clients.FindIndex(c => c.mSocket.Equals(recHostId));
                         if (i != -1) _clients[i].mIsConnected = false; // Set client connected to true
 
+                        break;
+                    
+                    // Broadcast
+                    case NetworkEventType.BroadcastEvent:
+                        // Broadcast Received Data
+                        i = _broadcasts.FindIndex(c => c.mSocket.Equals(recHostId));
+                        if (i != -1)
+                        {
+                            // Handles via OnMessage
+                        }
                         break;
                 }
             }
