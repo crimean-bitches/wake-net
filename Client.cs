@@ -62,11 +62,11 @@ namespace WakeNet
             {
                 case NetworkEventType.ConnectEvent:
                     if (Connected != null) Connected();
-                    FLog.LogFormat("Client| connected.", _hostId);
+                    NetUtils.Log("Client| connected.", _hostId);
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (Disconnected != null) Disconnected();
-                    FLog.LogFormat("Client| disconnected.", _hostId);
+                    NetUtils.Log("Client| disconnected.", _hostId);
                     break;
                 case NetworkEventType.DataEvent:
                     var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, datasize));
@@ -83,10 +83,8 @@ namespace WakeNet
                     }
                     else
                     {
-                        FLog.LogWarningFormat("Unsupported or not registered proxy type : {0}", packet.ProxyId);
+                        NetUtils.Log("Unsupported or not registered proxy type : {0}", packet.ProxyId);
                     }
-                    FLog.LogFormat("Client| data received [{0}] : {1}.", connectionid,
-                        Encoding.UTF8.GetString(buffer, 0, datasize));
                     break;
             }
         }

@@ -52,7 +52,7 @@ namespace WakeNet
                     _clients.Add(connectionId, new Client(_server.mSocket, connectionId));
                     if (ClientConnected != null) ClientConnected(_clients[connectionId]);
 
-                    FLog.LogFormat("Server| connected [{0}].", connectionId);
+                    NetUtils.Log("Server| connected [{0}].", connectionId);
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (!_clients.ContainsKey(connectionId)) throw new Exception("Client with ID disconnected already.");
@@ -60,7 +60,7 @@ namespace WakeNet
                     if (ClientDisconnected != null) ClientDisconnected(_clients[connectionId]);
                     _clients.Remove(connectionId);
 
-                    FLog.LogFormat("Server| disconnected [{0}].", connectionId);
+                    NetUtils.Log("Server| disconnected [{0}].", connectionId);
                     break;
                 case NetworkEventType.DataEvent:
                     if (!_clients.ContainsKey(connectionId)) throw new Exception("Data received for disconnected client.");
