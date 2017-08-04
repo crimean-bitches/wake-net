@@ -20,7 +20,6 @@ namespace WakeNet
     public class Client : IProxyHandler
     {
         private NetClient _client;
-        private int _hostId;
 
         public int ConnectionId { get { return _client.mConnection; } }
         public bool IsConnected { get { return _client.mIsConnected; } }
@@ -62,11 +61,11 @@ namespace WakeNet
             {
                 case NetworkEventType.ConnectEvent:
                     if (Connected != null) Connected();
-                    NetUtils.Log("Client| connected.", _hostId);
+                    NetUtils.Log("Client| connected.");
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (Disconnected != null) Disconnected();
-                    NetUtils.Log("Client| disconnected.", _hostId);
+                    NetUtils.Log("Client| disconnected.");
                     break;
                 case NetworkEventType.DataEvent:
                     var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, datasize));

@@ -34,7 +34,7 @@ namespace WakeNet.Internal
         {
             if (!NetManager.Initialized)
             {
-                NetUtils.Log("NetServer( ... ) - NetManager was not initialized. Did you forget to call NetManager.Init()?");
+                NetUtils.LogWarning("NetServer( ... ) - NetManager was not initialized. Did you forget to call NetManager.Init()?");
                 return;
             }
 
@@ -46,8 +46,7 @@ namespace WakeNet.Internal
             mPort = port;
 
             if (!NetUtils.IsSocketValid(mSocket))
-                NetUtils.Log("NetServer::NetServer( " + maxConnections + " , " + port +
-                          " ) returned an invalid socket ( " + mSocket + " )");
+                NetUtils.LogWarning("NetServer::NetServer( " + maxConnections + " , " + port + " ) returned an invalid socket ( " + mSocket + " )");
 
             mIsRunning = true;
         }
@@ -66,9 +65,7 @@ namespace WakeNet.Internal
             {
                 NetworkTransport.Send(mSocket, element, channel, data, data.Length, out error);
 
-                if (NetUtils.IsNetworkError(error))
-                    NetUtils.Log("NetServer::SendStream(" + data.Length + ") Failed with reason '" +
-                              NetUtils.GetNetworkError(error) + "'.");
+                NetUtils.IsNetworkError(this, error);
             }
         }
 
@@ -84,14 +81,7 @@ namespace WakeNet.Internal
             byte error;
             NetworkTransport.Send(mSocket, connId, channel, data, data.Length, out error);
 
-            if (NetUtils.IsNetworkError(error))
-            {
-                NetUtils.Log("NetServer::SendStream(" + data.Length + ") Failed with reason '" +
-                          NetUtils.GetNetworkError(error) + "'.");
-                return false;
-            }
-
-            return true;
+            return !NetUtils.IsNetworkError(this, error);
         }
 
         /// <summary>
@@ -102,22 +92,14 @@ namespace WakeNet.Internal
         {
             if (!HasClient(connId))
             {
-                NetUtils.Log("NetServer::DisconnectClient( " + connId +
-                          " ) Failed with reason 'Client with id does not exist!'");
+                NetUtils.LogWarning("NetServer::DisconnectClient( " + connId + " ) Failed with reason 'Client with id does not exist!'");
                 return false;
             }
 
             byte error;
             NetworkTransport.Disconnect(mSocket, connId, out error);
-
-            if (NetUtils.IsNetworkError(error))
-            {
-                NetUtils.Log("NetServer::DisconnectClient( " + connId + " ) Failed with reason '" +
-                          NetUtils.GetNetworkError(error) + "'.");
-                return false;
-            }
-
-            return true;
+            
+            return !NetUtils.IsNetworkError(this, error);
         }
 
         /// <summary>
@@ -137,7 +119,7 @@ namespace WakeNet.Internal
         {
             if (mClients.Contains(connId))
             {
-                NetUtils.Log("NetServer::AddClient( " + connId + " ) - Id already exists!");
+                NetUtils.LogWarning("NetServer::AddClient( " + connId + " ) - Id already exists!");
                 return false;
             }
 
@@ -154,7 +136,7 @@ namespace WakeNet.Internal
         {
             if (!mClients.Exists(element => element == connId))
             {
-                NetUtils.Log("NetServer::RemoveClient( " + connId + " ) - Client not connected!");
+                NetUtils.LogWarning("NetServer::RemoveClient( " + connId + " ) - Client not connected!");
                 return false;
             }
 

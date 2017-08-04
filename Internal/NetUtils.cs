@@ -1,5 +1,6 @@
 ﻿#region Usings
 
+using System;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -10,26 +11,19 @@ namespace WakeNet.Internal
     public static class NetUtils
     {
         /// <summary>
-        ///     Return string value of any network error if it is an error, otherwise return "";
-        /// </summary>
-        /// <param name="error">Error as string or "" if no error.</param>
-        public static string GetNetworkError(byte error)
-        {
-            if (error != (byte) NetworkError.Ok)
-            {
-                var nerror = (NetworkError) error;
-                return nerror.ToString();
-            }
-
-            return "";
-        }
-
-        /// <summary>
         ///     Returns true if the given code is a network error, false if not.
         /// </summary>
-        public static bool IsNetworkError(byte error)
+        public static bool IsNetworkError(object context, byte error)
         {
-            if (error != (byte) NetworkError.Ok) return true;
+            if (Enum.IsDefined(typeof(NetworkError), (int)error))
+            {
+                var netError = (NetworkError) error;
+                if (netError == NetworkError.Ok) return true;
+
+                LogError("Network Error occured in ({0}). Error : {1}", context.GetType().FullName, netError);
+            }
+            else LogError("Error occured in ({0}). Error code : {1}", context.GetType().FullName, error);
+
             return false;
         }
 
@@ -46,9 +40,35 @@ namespace WakeNet.Internal
         {
             Debug.Log(message);
         }
+
         public static void Log(string format, params object[] args)
         {
             Debug.LogFormat(format, args);
+        }
+
+        public static void LogWarning(object message)
+        {
+            Debug.LogWarning(message);
+        }
+
+        public static void LogWarning(string format, params object[] args)
+        {
+            Debug.LogWarningFormat(format, args);
+        }
+
+        public static void LogError(object message)
+        {
+            Debug.LogError(message);
+        }
+
+        public static void LogError(string format, params object[] args)
+        {
+            Debug.LogErrorFormat(format, args);
+        }
+
+        public static void LogException(Exception e)
+        {
+            Debug.LogException(e);
         }
     }
 }

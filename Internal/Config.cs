@@ -10,7 +10,7 @@ namespace WakeNet.Internal
     {
         public const int THREAD_POOL_SIZE = 8;
         public const int RECEIVE_RATE = 50;
-        public const int PACKET_SIZE = 512;
+        public const int PACKET_SIZE = 4096;
         public const int FRAGMENT_SIZE = PACKET_SIZE / 2;
 
         public static HostTopology GetHostTopology(int maxConnections)
@@ -23,8 +23,8 @@ namespace WakeNet.Internal
             var cc = new ConnectionConfig();
             cc.AddChannel(QosType.Reliable);
             cc.AddChannel(QosType.Unreliable);
-            cc.PacketSize = PACKET_SIZE;
-            cc.FragmentSize = FRAGMENT_SIZE;
+            //cc.PacketSize = PACKET_SIZE;
+            //cc.FragmentSize = FRAGMENT_SIZE;
             return cc;
         }
 
@@ -32,7 +32,7 @@ namespace WakeNet.Internal
         {
             var gc = new GlobalConfig();
             gc.ReactorModel = ReactorModel.FixRateReactor;
-            gc.MaxPacketSize = PACKET_SIZE;
+            //gc.MaxPacketSize = PACKET_SIZE;
             gc.ThreadPoolSize = THREAD_POOL_SIZE;
             return gc;
         }
