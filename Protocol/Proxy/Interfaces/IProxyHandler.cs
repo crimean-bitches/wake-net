@@ -1,6 +1,6 @@
-﻿using WakeNet.Protocol.Proxy.Messages;
+﻿using Wake.Protocol.Proxy.Messages;
 
-namespace WakeNet.Protocol.Proxy.Interfaces
+namespace Wake.Protocol.Proxy.Interfaces
 {
     public interface IProxyHandler
     {

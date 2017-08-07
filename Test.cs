@@ -2,24 +2,22 @@
 
 using System.Collections;
 using UnityEngine;
-using WakeNet.Internal;
-using WakeNet.Protocol.Proxy.Messages;
+using Wake.Protocol.Proxy.Messages;
 
 #endregion
 
-namespace WakeNet
+namespace Wake
 {
     public class Test : MonoBehaviour
     {
         // Use this for initialization
         private IEnumerator Start()
         {
-            NetManager.Init();
+            WakeNet.Init(WakeNetConfig.Default);
 
-            var server = new Server(11301);
-            server.Start();
-            var client = new Client();
-
+            var server = WakeNet.CreateServer(4, 11301);
+            var client = WakeNet.CreateClient();
+            
             server.ClientConnected += ClientConnected;
             
             client.Connect("127.0.0.1", 11301);
@@ -38,7 +36,7 @@ namespace WakeNet
             //client.Disconnect();
         }
 
-        private void ClientConnected(Client client)
+        private void ClientConnected(WakeClient client)
         {
             var proxy = client.AddProxy<EmptyMessage, EmptyMessage>(1, 0);
             var proxy2 = client.AddProxy<StringMessage, StringMessage>(2, 0);
