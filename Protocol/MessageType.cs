@@ -1,6 +1,6 @@
 ﻿namespace Wake.Protocol
 {
-    public static partial class MessageType
+    public static class MessageType
     {
         public const ushort Raw = 0;
     }

@@ -1,4 +1,8 @@
-﻿using UnityEngine.Networking;
+﻿#region Usings
+
+using UnityEngine.Networking;
+
+#endregion
 
 namespace Wake
 {
@@ -8,6 +12,7 @@ namespace Wake
         public bool IsConnected { get; protected set; }
         public byte Error { get; protected set; }
 
-        internal abstract void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId, byte[] buffer, int dataSize);
+        internal abstract void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId,
+            byte[] buffer, int dataSize);
     }
 }

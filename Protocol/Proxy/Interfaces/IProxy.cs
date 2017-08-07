@@ -1,4 +1,8 @@
-﻿using Wake.Protocol.Proxy.Messages;
+﻿#region Usings
+
+using Wake.Protocol.Proxy.Messages;
+
+#endregion
 
 namespace Wake.Protocol.Proxy.Interfaces
 {
