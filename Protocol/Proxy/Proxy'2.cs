@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
-using WakeNet.Protocol.Proxy.Interfaces;
-using WakeNet.Protocol.Proxy.Messages;
+using Wake.Protocol.Proxy.Interfaces;
+using Wake.Protocol.Proxy.Messages;
 
-namespace WakeNet.Protocol.Proxy
+namespace Wake.Protocol.Proxy
 {
     public sealed class Proxy<TInMessage, TOutMessage> : IProxy where TInMessage : MessageBase where TOutMessage : MessageBase
     {

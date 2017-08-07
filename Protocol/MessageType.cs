@@ -1,4 +1,4 @@
-﻿namespace WakeNet.Protocol
+﻿namespace Wake.Protocol
 {
     public static partial class MessageType
     {

@@ -4,7 +4,7 @@ using System;
 
 #endregion
 
-namespace WakeNet.Protocol.Internal
+namespace Wake.Protocol.Internal
 {
     [Serializable]
     internal class Packet
