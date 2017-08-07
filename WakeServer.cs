@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.Networking;
 
 #endregion
@@ -44,7 +45,10 @@ namespace Wake
         public void DisconnectAllClients()
         {
             WakeNet.Log("WakeServer::DisconnectAllClients()");
-            foreach (var clientId in _clients.Keys) DisconnectClient(clientId);
+            foreach (var clientId in _clients.Keys.ToList())
+            {
+                DisconnectClient(clientId);
+            }
         }
 
         #region Internal

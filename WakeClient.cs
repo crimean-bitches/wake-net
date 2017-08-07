@@ -35,6 +35,10 @@ namespace Wake
         public int Port { get; private set; }
         public string Host { get; private set; }
         public int ConnectionId { get; private set; }
+        
+        public event Action Connected;
+        public event Action Disconnected;
+        public event Action<byte[], int> DataReceived;
 
         public void Send(byte[] data, int channelId, ushort proxyId = 0)
         {
@@ -48,10 +52,6 @@ namespace Wake
             NetworkTransport.Send(Socket, ConnectionId, channelId, packet, packet.Length, out error);
             if (error > 0) Error = error;
         }
-
-        public event Action Connected;
-        public event Action Disconnected;
-        public event Action<byte[], int> DataReceived;
 
         public void Connect(string host, int port)
         {
