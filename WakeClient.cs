@@ -17,14 +17,6 @@ namespace Wake
 {
     public sealed class WakeClient : WakeObject, IProxyHandler
     {
-        public int ConnectionId { get; private set; }
-        public int Port { get; private set; }
-        public string Host { get; private set; }
-
-        public event Action Connected;
-        public event Action Disconnected;
-        public event Action<byte[], int> DataReceived;
-
         internal WakeClient()
         {
             WakeNet.Log("WakeClient::Ctor()");
@@ -40,33 +32,9 @@ namespace Wake
             IsConnected = true;
         }
 
-        public void Connect(string host, int port)
-        {
-            WakeNet.Log("WakeClient::Connect()");
-            byte error;
-            ConnectionId = NetworkTransport.Connect(Socket, host, port, 0, out error);
-            if (error > 0) Error = error;
-            else
-            {
-                IsConnected = true;
-                Host = host;
-                Port = port;
-            }
-        }
-        
-        public void Disconnect()
-        {
-            WakeNet.Log("WakeClient::Disconnect()");
-            if (!IsConnected)
-            {
-                WakeNet.Log(WakeError.NotConnected);
-                return;
-            }
-
-            byte error;
-            NetworkTransport.Disconnect(Socket, ConnectionId, out error);
-            if (error > 0) Error = error;
-        }
+        public int Port { get; private set; }
+        public string Host { get; private set; }
+        public int ConnectionId { get; private set; }
 
         public void Send(byte[] data, int channelId, ushort proxyId = 0)
         {
@@ -81,36 +49,43 @@ namespace Wake
             if (error > 0) Error = error;
         }
 
-        #region Explicit Interface Implementation
+        public event Action Connected;
+        public event Action Disconnected;
+        public event Action<byte[], int> DataReceived;
 
-        internal int ProxyCount { get { return _proxys == null ? 0 : _proxys.Count; } }
-        internal IProxy GetProxyAtIndex(int index)
+        public void Connect(string host, int port)
         {
-            if (_proxys == null) return null;
-            if (_proxys.Count == 0) return null;
-            return _proxys.Values.ElementAt(index);
+            WakeNet.Log("WakeClient::Connect()");
+            byte error;
+            ConnectionId = NetworkTransport.Connect(Socket, host, port, 0, out error);
+            if (error > 0)
+            {
+                Error = error;
+            }
+            else
+            {
+                IsConnected = true;
+                Host = host;
+                Port = port;
+            }
         }
 
-        private Dictionary<ushort, IProxy> _proxys;
-        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(ushort proxyId, int channelId)
-            where TInMessage : MessageBase where TOutMessage : MessageBase
+        public void Disconnect()
         {
-            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
-            if (_proxys.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy with ID - {0} already registered", proxyId));
-            _proxys.Add(proxyId, new Proxy<TInMessage, TOutMessage>(channelId));
-            return (Proxy<TInMessage, TOutMessage>) _proxys[proxyId];
-        }
-        public void RemoveProxy(ushort proxyId)
-        {
-            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
-            if (!_proxys.ContainsKey(proxyId))
-                throw new Exception(string.Format("Proxy with ID - {0} not registered", proxyId));
-            _proxys.Remove(proxyId);
+            WakeNet.Log("WakeClient::Disconnect()");
+            if (!IsConnected)
+            {
+                WakeNet.Log(WakeError.NotConnected);
+                return;
+            }
+
+            byte error;
+            NetworkTransport.Disconnect(Socket, ConnectionId, out error);
+            if (error > 0) Error = error;
         }
 
-        #endregion
-
-        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId, byte[] buffer, int dataSize)
+        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId,
+            byte[] buffer, int dataSize)
         {
             switch (netEvent)
             {
@@ -152,5 +127,38 @@ namespace Wake
                 Send(_proxys[k].PopMessageFromQueue(), _proxys[k].ChannelId, k);
             }
         }
+
+        #region Explicit Interface Implementation
+
+        internal int ProxyCount => _proxys == null ? 0 : _proxys.Count;
+
+        internal IProxy GetProxyAtIndex(int index)
+        {
+            if (_proxys == null) return null;
+            if (_proxys.Count == 0) return null;
+            return _proxys.Values.ElementAt(index);
+        }
+
+        private Dictionary<ushort, IProxy> _proxys;
+
+        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(ushort proxyId, int channelId)
+            where TInMessage : MessageBase where TOutMessage : MessageBase
+        {
+            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
+            if (_proxys.ContainsKey(proxyId))
+                throw new Exception(string.Format("Proxy with ID - {0} already registered", proxyId));
+            _proxys.Add(proxyId, new Proxy<TInMessage, TOutMessage>(channelId));
+            return (Proxy<TInMessage, TOutMessage>) _proxys[proxyId];
+        }
+
+        public void RemoveProxy(ushort proxyId)
+        {
+            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
+            if (!_proxys.ContainsKey(proxyId))
+                throw new Exception(string.Format("Proxy with ID - {0} not registered", proxyId));
+            _proxys.Remove(proxyId);
+        }
+
+        #endregion
     }
 }

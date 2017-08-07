@@ -10,12 +10,9 @@ namespace Wake
 {
     public sealed class WakeServer : WakeObject
     {
-        private readonly int _port;
         private readonly IDictionary<int, WakeClient> _clients;
+        private readonly int _port;
 
-        public event Action<WakeClient> ClientConnected;
-        public event Action<WakeClient> ClientDisconnected;
-  
         internal WakeServer(int maxConnections, int port, int simMinTimeout = 0, int simMaxTimeout = 0)
         {
             WakeNet.Log("WakeServer::Ctor()");
@@ -23,9 +20,12 @@ namespace Wake
             _clients = new Dictionary<int, WakeClient>();
 
             Socket = WakeNet.AddSocket(maxConnections, simMinTimeout, simMaxTimeout, _port);
-            if(Socket >= 0)
-            IsConnected = true;
+            if (Socket >= 0)
+                IsConnected = true;
         }
+
+        public event Action<WakeClient> ClientConnected;
+        public event Action<WakeClient> ClientDisconnected;
 
         public void DisconnectClient(int clientId)
         {
@@ -40,7 +40,7 @@ namespace Wake
             NetworkTransport.Disconnect(Socket, clientId, out error);
             _clients.Remove(clientId);
         }
-        
+
         public void DisconnectAllClients()
         {
             WakeNet.Log("WakeServer::DisconnectAllClients()");
@@ -49,7 +49,8 @@ namespace Wake
 
         #region Internal
 
-        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId, byte[] buffer, int dataSize)
+        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId,
+            byte[] buffer, int dataSize)
         {
             switch (netEvent)
             {
@@ -78,11 +79,11 @@ namespace Wake
                     break;
                 case NetworkEventType.DataEvent:
                     // TODO reorganize this thing to allow server receive direct messages, not only user avatar
-                    if (!_clients.ContainsKey(connectionId)) throw new Exception("Data received for disconnected client.");
+                    if (!_clients.ContainsKey(connectionId))
+                        throw new Exception("Data received for disconnected client.");
                     _clients[connectionId].ProcessIncomingEvent(netEvent, connectionId, channelId, buffer, dataSize);
                     break;
             }
-
         }
 
         internal void ProcessOutgoingEvents()
@@ -92,6 +93,5 @@ namespace Wake
         }
 
         #endregion
-
     }
 }
