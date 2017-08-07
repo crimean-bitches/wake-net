@@ -7,15 +7,15 @@ Wake Net TODO
 - [X] Correct connect / disconnet handling
 - [X] Stable message exchange
 - [X] Proxy's
-- [ ] Compose Client and NetClient to single class
+- [X] Compose Client and NetClient to single class
 - [ ] Server-side client connection/disconnection event
-- [ ] Network discovery support for server
-- [ ] Single Access Point (make NetManager public)
-- [ ] Initialization Configuration
-- [ ] Channels setup in intiialization
-- [ ] Packet sizes set up in initialization
-- [ ] Thread configuration in initialization
-- [ ] Global refactor (SOLID)
+- [X] Network discovery support for server
+- [X] Single Access Point (make NetManager public)
+- [X] Initialization Configuration
+- [X] Channels setup in intiialization
+- [X] Packet sizes set up in initialization
+- [X] Thread configuration in initialization
+- [X] Global refactor (SOLID)
 - [ ] Custom logger
 - [ ] Buffers control and reducing memory overhead
 - [ ] Profiling and optimizations
