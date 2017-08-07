@@ -355,7 +355,7 @@ namespace Wake
         internal static void RemoveSocket(int socket)
         {
             if (!Initialized) Log(WakeError.NotInitialized);
-            if (!IsValidSocketToRemove(socket)) return;
+            if (!IsValidSocketToRemove(socket)) Log(WakeError.NotInitialized);
 
             NetworkTransport.RemoveHost(socket);
             _sockets.Remove(socket);
