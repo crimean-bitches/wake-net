@@ -45,10 +45,10 @@ namespace Wake
 
         public void Broadcast(string broadcastMessage, string password = "")
         {
-            WakeNet.Log("WakeDiscovery::Broadcast()");
             if (IsBroadcasting) return;
 
             Socket = NetworkTransport.AddHost(_hostTopology);
+            WakeNet.Log($"WakeDiscovery:{Socket}:Broadcast()");
             WakeNet.RegisterSocket(Socket);
 
             var sendInfo = new GameResult
@@ -69,10 +69,10 @@ namespace Wake
 
         public void Search()
         {
-            WakeNet.Log("WakeDiscovery::Search()");
             if (IsSearching) return;
 
             Socket = NetworkTransport.AddHost(_hostTopology, _port);
+            WakeNet.Log($"WakeDiscovery:{Socket}:Search()");
             WakeNet.RegisterSocket(Socket);
 
             byte error;
@@ -83,7 +83,7 @@ namespace Wake
 
         public void Shutdown()
         {
-            WakeNet.Log("WakeDiscovery::Shutdown()");
+            WakeNet.Log($"WakeDiscovery:{Socket}:Shutdown()");
             if (IsBroadcasting)
             {
                 NetworkTransport.StopBroadcastDiscovery();
@@ -91,7 +91,6 @@ namespace Wake
             }
             if (IsSearching)
                 IsSearching = false;
-            WakeNet.RemoveSocket(Socket);
         }
 
         internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId,

@@ -30,7 +30,7 @@ namespace Wake
 
         public void DisconnectClient(int clientId)
         {
-            WakeNet.Log("WakeServer::DisconnectClient()");
+            WakeNet.Log($"WakeServer:{Socket}:DisconnectClient()");
             if (!_clients.ContainsKey(clientId))
             {
                 WakeNet.Log(WakeError.ClientNotExists);
@@ -44,7 +44,7 @@ namespace Wake
 
         public void DisconnectAllClients()
         {
-            WakeNet.Log("WakeServer::DisconnectAllClients()");
+            WakeNet.Log($"WakeServer:{Socket}:DisconnectAllClients()");
             foreach (var clientId in _clients.Keys.ToList())
             {
                 DisconnectClient(clientId);
@@ -67,7 +67,7 @@ namespace Wake
 
                     _clients.Add(connectionId, new WakeClient(Socket, connectionId));
                     if (ClientConnected != null) ClientConnected(_clients[connectionId]);
-                    WakeNet.Log("Server| connected [{0}].", connectionId);
+                    WakeNet.Log($"Server|{Socket}| connected [{0}].", connectionId);
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (!_clients.ContainsKey(connectionId))
@@ -79,7 +79,7 @@ namespace Wake
                     if (ClientDisconnected != null) ClientDisconnected(_clients[connectionId]);
                     _clients.Remove(connectionId);
 
-                    WakeNet.Log("Server| disconnected [{0}].", connectionId);
+                    WakeNet.Log($"Server|{Socket}| disconnected [{0}].", connectionId);
                     break;
                 case NetworkEventType.DataEvent:
                     // TODO reorganize this thing to allow server receive direct messages, not only user avatar

@@ -42,7 +42,7 @@ namespace Wake
 
         public void Send(byte[] data, int channelId, ushort proxyId = 0)
         {
-            WakeNet.Log("WakeClient::Send()");
+            WakeNet.Log($"WakeClient:{Socket}:Send()");
             var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
             {
                 Data = data,
@@ -55,7 +55,7 @@ namespace Wake
 
         public void Connect(string host, int port)
         {
-            WakeNet.Log("WakeClient::Connect()");
+            WakeNet.Log($"WakeClient:{Socket}:Connect()");
             byte error;
             ConnectionId = NetworkTransport.Connect(Socket, host, port, 0, out error);
             if (error > 0)
@@ -72,7 +72,7 @@ namespace Wake
 
         public void Disconnect()
         {
-            WakeNet.Log("WakeClient::Disconnect()");
+            WakeNet.Log($"WakeClient:{Socket}:Disconnect()");
             if (!IsConnected)
             {
                 WakeNet.Log(WakeError.NotConnected);
@@ -91,11 +91,11 @@ namespace Wake
             {
                 case NetworkEventType.ConnectEvent:
                     if (Connected != null) Connected();
-                    WakeNet.Log("Client| connected.");
+                    WakeNet.Log($"Client|{Socket}| connected.");
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (Disconnected != null) Disconnected();
-                    WakeNet.Log("Client| disconnected.");
+                    WakeNet.Log($"Client|{Socket}| disconnected.");
                     break;
                 case NetworkEventType.DataEvent:
                     var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, dataSize));

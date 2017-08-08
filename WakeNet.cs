@@ -229,7 +229,7 @@ namespace Wake
             }
 
             client.Disconnect();
-            NetworkTransport.RemoveHost(client.Socket);
+            RemoveSocket(client.Socket);
             _clients.Remove(client);
         }
 
@@ -276,9 +276,9 @@ namespace Wake
                 Log(WakeError.DiscoveryNotExists);
                 return;
             }
-
+            
             discovery.Shutdown();
-            NetworkTransport.RemoveHost(discovery.Socket);
+            RemoveSocket(discovery.Socket);
             _discoveries.Remove(discovery);
         }
 
@@ -374,7 +374,7 @@ namespace Wake
         private static bool IsValidSocketToRemove(int sock)
         {
             if (sock < 0) return false;
-            return !_sockets.Contains(sock);
+            return _sockets.Contains(sock);
         }
 
         public static void Log(object message)
