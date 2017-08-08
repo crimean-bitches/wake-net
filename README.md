@@ -1,6 +1,6 @@
 unity-llapi-wrapper
 ============
-Unity3D LLAPI to custom HLAPI wrapper using message wrapping with proxy's
+Unity3D LLAPI to custom HLAPI wrapper using message wrapping with proxy's, events and other pretty stuff.
 
 Wake Net TODO
 ============
