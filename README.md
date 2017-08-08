@@ -20,6 +20,7 @@ Wake Net TODO
 - [ ] Custom logger
 - [ ] Buffers control and reducing memory overhead
 - [ ] Profiling and optimizations
+- [ ] Websocket support
 - [ ] Publish to asset store
 
 Contributing
