@@ -22,9 +22,10 @@ namespace Wake
         private readonly int _port;
         private readonly int _subversion;
         private readonly int _version;
+        private readonly float _interval;
 
 
-        public WakeDiscovery(int port, int key, int version, int subversion)
+        public WakeDiscovery(int port, int key, int version, int subversion, float interval = 1f)
         {
             WakeNet.Log("WakeDiscovery::Ctor()");
 
@@ -36,6 +37,7 @@ namespace Wake
             _key = key;
             _version = version;
             _subversion = subversion;
+            _interval = interval;
         }
 
         public bool IsBroadcasting { get; private set; }
@@ -43,7 +45,7 @@ namespace Wake
 
         public ReadOnlyCollection<Result> FoundGames => new ReadOnlyCollection<Result>(_foundGames.Values.ToList());
 
-        public void Broadcast(string broadcastMessage, string password = "")
+        public void Broadcast(string broadcastMessage)
         {
             if (IsBroadcasting) return;
 
@@ -54,9 +56,7 @@ namespace Wake
             var sendInfo = new GameResult
             {
                 DeviceId = SystemInfo.deviceUniqueIdentifier,
-                Message = broadcastMessage,
-                PasswordHash = string.IsNullOrEmpty(password) ? "" : MD5.Hash(password),
-                Timestamp = NetworkTransport.GetNetworkTimestamp()
+                Message = broadcastMessage
             };
 
             var data = Encoding.UTF8.GetBytes(JsonUtility.ToJson(sendInfo, true));
@@ -122,23 +122,26 @@ namespace Wake
             if (!_foundGames.ContainsKey(gameResult.DeviceId))
             {
                 _foundGames.Add(gameResult.DeviceId, new Result {Host = host, Port = port, GameResult = gameResult});
+                _foundGames[gameResult.DeviceId].Routine = WakeNet.InvokeAt(() => { _foundGames.Remove(gameResult.DeviceId); }, Time.unscaledTime + _interval * 2);
             }
             else
             {
+                _foundGames[gameResult.DeviceId].Host = host;
+                _foundGames[gameResult.DeviceId].Port = port;
                 _foundGames[gameResult.DeviceId].GameResult.Message = gameResult.Message;
-                _foundGames[gameResult.DeviceId].GameResult.PasswordHash = gameResult.PasswordHash;
-                _foundGames[gameResult.DeviceId].GameResult.Timestamp = gameResult.Timestamp;
+                WakeNet.StopRoutine(_foundGames[gameResult.DeviceId].Routine);
+                _foundGames[gameResult.DeviceId].Routine = WakeNet.InvokeAt(() => { _foundGames.Remove(gameResult.DeviceId); }, Time.unscaledTime + _interval * 2);
             }
 
-            // TODO clean games which were not bradcasting
+            var key = gameResult.DeviceId;
         }
-
-        [Serializable]
+        
         public sealed class Result
         {
             public GameResult GameResult;
             public string Host;
             public int Port;
+            [NonSerialized] public Coroutine Routine;
         }
 
         [Serializable]
@@ -146,8 +149,6 @@ namespace Wake
         {
             public string DeviceId;
             public string Message;
-            public string PasswordHash;
-            public int Timestamp;
         }
     }
 }

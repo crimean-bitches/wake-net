@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Helper;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Networking;
 
 #endregion
@@ -128,6 +129,7 @@ namespace Wake
             if (Initialized) return;
             _config = config ?? WakeNetConfig.Default;
 
+            Network.logLevel = config.LogLevel;
             Instance.Start();
             NetworkTransport.Init(_config.GlobalConfig);
             Initialized = true;
@@ -377,17 +379,33 @@ namespace Wake
             return _sockets.Contains(sock);
         }
 
-        public static void Log(object message)
+        internal static void StopRoutine(Coroutine routine)
+        {
+            Instance.StopCoroutine(routine);
+        }
+        internal static Coroutine InvokeAt(UnityAction action, float time)
+        {
+            return Instance.StartCoroutine(WaitUntilAndInvoke(action, time));
+        }
+
+        private static IEnumerator WaitUntilAndInvoke(UnityAction action, float time)
+        {
+            while (time > Time.unscaledTime)
+                yield return null;
+            if (action != null) action();
+        }
+
+        internal static void Log(object message)
         {
             Debug.Log(message);
         }
 
-        public static void Log(string message)
+        internal static void Log(string message)
         {
             Debug.Log(message);
         }
 
-        public static void Log(string message, params object[] args)
+        internal static void Log(string message, params object[] args)
         {
             Debug.LogFormat(message, args);
         }
