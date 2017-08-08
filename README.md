@@ -11,15 +11,16 @@ Wake Net TODO
 - [ ] Server-side client connection/disconnection event (server side client)
 - [ ] Server-side message handling (not to server side client)
 - [X] Network discovery support for server
-- [X] Single Access Point (make NetManager public)
+- [X] Single Access Point (make NetManager public for some cases)
 - [X] Initialization Configuration
 - [X] Channels setup in intiialization
 - [X] Packet sizes set up in initialization
 - [X] Thread configuration in initialization
-- [X] Global refactor (SOLID)
+- [X] Global refactor
 - [ ] Custom logger
 - [ ] Buffers control and reducing memory overhead
 - [ ] Profiling and optimizations
+- [ ] Publish to asset store
 
 Contributing
 ============
