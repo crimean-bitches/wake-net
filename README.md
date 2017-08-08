@@ -25,7 +25,4 @@ Wake Net TODO
 
 Contributing
 ============
-
-1. Fork the _develop_ branch of https://github.com/blackboneworks/wake-net
-2. Commit your changes in small, incremental steps with clear descriptions
-3. When ready, issue a Pull Request (PR) against the _develop_ branch of https://github.com/blackboneworks/wake-net
+Contributing guideline can be found [here](https://github.com/blackboneworks/wake-net/blob/master/CONTRIBUTING.md).
