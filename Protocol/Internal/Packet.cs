@@ -10,6 +10,7 @@ namespace Wake.Protocol.Internal
     internal class Packet
     {
         public byte[] Data;
-        public ushort ProxyId;
+        public string ProxyId;
+        public bool Server;
     }
 }

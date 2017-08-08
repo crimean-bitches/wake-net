@@ -15,7 +15,7 @@ using MessageBase = Wake.Protocol.Proxy.Messages.MessageBase;
 
 namespace Wake
 {
-    public sealed class WakeClient : WakeObject, IProxyHandler
+    public sealed class WakeClient : WakeObject
     {
         internal WakeClient()
         {
@@ -40,13 +40,14 @@ namespace Wake
         public event Action Disconnected;
         public event Action<byte[], int> DataReceived;
 
-        public void Send(byte[] data, int channelId, ushort proxyId = 0)
+        public void Send(byte[] data, int channelId, string proxyId, bool server)
         {
             WakeNet.Log($"WakeClient:{Socket}:Send()");
             var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
             {
                 Data = data,
-                ProxyId = proxyId
+                ProxyId = proxyId,
+                Server = server
             }, true));
             byte error;
             NetworkTransport.Send(Socket, ConnectionId, channelId, packet, packet.Length, out error);
@@ -84,8 +85,7 @@ namespace Wake
             if (error > 0) Error = error;
         }
 
-        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId,
-            byte[] buffer, int dataSize)
+        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId, byte[] buffer, int dataSize)
         {
             switch (netEvent)
             {
@@ -99,7 +99,7 @@ namespace Wake
                     break;
                 case NetworkEventType.DataEvent:
                     var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, dataSize));
-                    if (packet.ProxyId == 0)
+                    if (string.IsNullOrEmpty(packet.ProxyId))
                     {
                         // handle raw packages
                         if (DataReceived != null) DataReceived(packet.Data, channelId);
@@ -108,7 +108,7 @@ namespace Wake
                     {
                         // pass data to proxy, it'll deserialize it to proper type
                         // and fires own event
-                        _proxys[packet.ProxyId].ReceivedInternal(packet.Data);
+                        _proxys[packet.ProxyId].ReceivedInternal(packet.Data, connectionId);
                     }
                     else
                     {
@@ -124,7 +124,7 @@ namespace Wake
             foreach (var k in _proxys.Keys)
             {
                 if (_proxys[k].SendQueueCount <= 0) continue;
-                Send(_proxys[k].PopMessageFromQueue(), _proxys[k].ChannelId, k);
+                Send(_proxys[k].PopMessageFromQueue(), _proxys[k].ChannelId, k, _proxys[k].Server);
             }
         }
 
@@ -139,21 +139,22 @@ namespace Wake
             return _proxys.Values.ElementAt(index);
         }
 
-        private Dictionary<ushort, IProxy> _proxys;
+        private Dictionary<string, IProxy> _proxys;
 
-        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(ushort proxyId, int channelId)
+        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(string proxyId, int channelId, bool server)
             where TInMessage : MessageBase where TOutMessage : MessageBase
         {
-            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
-            if (_proxys.ContainsKey(proxyId))
-                throw new Exception(string.Format("Proxy with ID - {0} already registered", proxyId));
-            _proxys.Add(proxyId, new Proxy<TInMessage, TOutMessage>(channelId));
+            if (_proxys == null) _proxys = new Dictionary<string, IProxy>();
+
+            if (_proxys.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy with ID - {0} already registered", proxyId));
+
+            _proxys.Add(proxyId, new Proxy<TInMessage, TOutMessage>(channelId, server));
             return (Proxy<TInMessage, TOutMessage>) _proxys[proxyId];
         }
 
-        public void RemoveProxy(ushort proxyId)
+        public void RemoveProxy(string proxyId)
         {
-            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
+            if (_proxys == null) _proxys = new Dictionary<string, IProxy>();
             if (!_proxys.ContainsKey(proxyId))
                 throw new Exception(string.Format("Proxy with ID - {0} not registered", proxyId));
             _proxys.Remove(proxyId);

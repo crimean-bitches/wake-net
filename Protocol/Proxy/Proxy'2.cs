@@ -11,41 +11,40 @@ using Wake.Protocol.Proxy.Messages;
 
 namespace Wake.Protocol.Proxy
 {
-    public sealed class Proxy<TInMessage, TOutMessage> : IProxy
-        where TInMessage : MessageBase where TOutMessage : MessageBase
+    public sealed class Proxy<TInMessage, TOutMessage> : IProxy where TInMessage : MessageBase where TOutMessage : MessageBase
     {
         private readonly Queue<byte[]> _sendQueue;
+        private readonly bool _server;
 
-        internal Proxy(int channelId)
+        public int ChannelId { get; private set; }
+        public bool Server { get { return _server; } }
+        public int SendQueueCount { get { return _sendQueue.Count; } }
+
+        public event Action<TInMessage, int> Received;
+
+        internal Proxy(int channelId, bool server)
         {
             ChannelId = channelId;
             _sendQueue = new Queue<byte[]>();
+            _server = server;
         }
-
-        public int ChannelId { get; }
-
-        public int SendQueueCount => _sendQueue.Count;
-
-        public event Action<TInMessage> Received;
 
         public void Send(TOutMessage message)
         {
             SendInternal(message);
         }
 
-        #region Implicit Interface Implementation
-
-        public int ConnectionId { get; set; }
-
+        #region IProxy
+        
         public byte[] PopMessageFromQueue()
         {
             return _sendQueue.Dequeue();
         }
 
-        public void ReceivedInternal(byte[] rawMessage)
+        public void ReceivedInternal(byte[] rawMessage, int connectionId)
         {
             var message = JsonUtility.FromJson<TInMessage>(Encoding.UTF8.GetString(rawMessage));
-            if (Received != null) Received(message);
+            if (Received != null) Received(message, connectionId);
         }
 
         public void SendInternal(MessageBase message)

@@ -94,6 +94,7 @@ namespace Wake
                 // invoke handler which allows to send all waiting data on server and client sides
                 for (var c = 0; c < _clients.Count; c++) _clients[c].ProcessOutgoingEvents();
                 for (var s = 0; s < _servers.Count; s++) _servers[s].ProcessOutgoingEvents();
+
             } while (Initialized && networkEvent != NetworkEventType.Nothing);
         }
 
@@ -129,7 +130,7 @@ namespace Wake
             if (Initialized) return;
             _config = config ?? WakeNetConfig.Default;
 
-            Network.logLevel = config.LogLevel;
+            Network.logLevel = _config.LogLevel;
             Instance.Start();
             NetworkTransport.Init(_config.GlobalConfig);
             Initialized = true;

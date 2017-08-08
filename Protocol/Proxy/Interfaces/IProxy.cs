@@ -10,10 +10,11 @@ namespace Wake.Protocol.Proxy.Interfaces
     {
         int ChannelId { get; }
         int SendQueueCount { get; }
+        bool Server { get; }
 
         byte[] PopMessageFromQueue();
 
-        void ReceivedInternal(byte[] rawMessage);
+        void ReceivedInternal(byte[] rawMessage, int connectionId);
         void SendInternal(MessageBase message);
     }
 }
