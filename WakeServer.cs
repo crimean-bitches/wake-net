@@ -9,7 +9,7 @@ using UnityEngine.Networking;
 using Wake.Protocol.Internal;
 using Wake.Protocol.Proxy;
 using Wake.Protocol.Proxy.Interfaces;
-using MessageBase = Wake.Protocol.Proxy.Messages.MessageBase;
+using MessageBase = Wake.Protocol.Messages.MessageBase;
 
 #endregion
 
@@ -18,7 +18,17 @@ namespace Wake
     public sealed class WakeServer : WakeObject
     {
         private readonly IDictionary<int, WakeClient> _clients;
+
+        private readonly Dictionary<string, IProxySender> _proxySenders;
+        private readonly Dictionary<string, IProxyReceiver> _proxyReceivers;
+
         private readonly int _port;
+        
+        public int ClientCount { get { return _clients.Count; } }
+
+        public event Action<WakeClient> ClientConnected;
+        public event Action<WakeClient> ClientDisconnected;
+        public event Action<byte[], int> DataReceived;
 
         internal WakeServer(int maxConnections, int port, int simMinTimeout = 0, int simMaxTimeout = 0)
         {
@@ -26,18 +36,17 @@ namespace Wake
             _port = port;
             _clients = new Dictionary<int, WakeClient>();
 
+            _proxySenders = new Dictionary<string, IProxySender>();
+            _proxyReceivers = new Dictionary<string, IProxyReceiver>();
+
             Socket = WakeNet.AddSocket(maxConnections, simMinTimeout, simMaxTimeout, _port);
             if (Socket >= 0)
                 IsConnected = true;
         }
 
-        public event Action<WakeClient> ClientConnected;
-        public event Action<WakeClient> ClientDisconnected;
-        public event Action<byte[], int> DataReceived;
-
         public void DisconnectClient(int clientId)
         {
-            WakeNet.Log($"WakeServer:{Socket}:DisconnectClient()");
+            WakeNet.Log(string.Format("WakeServer:{0}:DisconnectClient()", Socket));
             if (!_clients.ContainsKey(clientId))
             {
                 WakeNet.Log(WakeError.ClientNotExists);
@@ -51,11 +60,29 @@ namespace Wake
 
         public void DisconnectAllClients()
         {
-            WakeNet.Log($"WakeServer:{Socket}:DisconnectAllClients()");
+            WakeNet.Log(string.Format("WakeServer:{0}:DisconnectAllClients()", Socket));
             foreach (var clientId in _clients.Keys.ToList())
             {
                 DisconnectClient(clientId);
             }
+        }
+
+        public void Send(byte[] data, int channelId, string proxyId, int connectionId)
+        {
+            var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
+            {
+                Data = data,
+                ProxyId = proxyId,
+                Server = true
+            }, true));
+            WakeNet.Log(string.Format("WakeServer:{0}:Send()\n", Socket) + Encoding.UTF8.GetString(packet));
+            byte error = 0;
+            if (connectionId >= 0)
+                NetworkTransport.Send(Socket, connectionId, channelId, packet, packet.Length, out error);
+            else
+                foreach (var client in _clients.Keys)
+                    NetworkTransport.Send(Socket, client, channelId, packet, packet.Length, out error);
+            if (error > 0) Error = error;
         }
 
         #region Internal
@@ -73,7 +100,7 @@ namespace Wake
 
                     _clients.Add(connectionId, new WakeClient(Socket, connectionId));
                     if (ClientConnected != null) ClientConnected(_clients[connectionId]);
-                    WakeNet.Log($"Server|{Socket}| connected [{0}].", connectionId);
+                    WakeNet.Log(string.Format("Server|{0}| connected [{1}].", Socket, connectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (!_clients.ContainsKey(connectionId))
@@ -85,7 +112,7 @@ namespace Wake
                     if (ClientDisconnected != null) ClientDisconnected(_clients[connectionId]);
                     _clients.Remove(connectionId);
 
-                    WakeNet.Log($"Server|{Socket}| disconnected [{0}].", connectionId);
+                    WakeNet.Log(string.Format("Server|{0}| disconnected [{1}].", Socket, connectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DataEvent:
                     var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, dataSize));
@@ -96,15 +123,15 @@ namespace Wake
                             // handle raw packages
                             if (DataReceived != null) DataReceived(packet.Data, channelId);
                         }
-                        else if (_proxys.ContainsKey(packet.ProxyId))
+                        else if (_proxyReceivers.ContainsKey(packet.ProxyId))
                         {
                             // pass data to proxy, it'll deserialize it to proper type
                             // and fires own event
-                            _proxys[packet.ProxyId].ReceivedInternal(packet.Data, connectionId);
+                            _proxyReceivers[packet.ProxyId].ReceivedInternal(packet.Data, connectionId);
                         }
                         else
                         {
-                            WakeNet.Log($"Unsupported or not registered proxy type : {packet.ProxyId}");
+                            WakeNet.Log(string.Format("Unsupported or not registered proxy type : {0}", packet.ProxyId));
                         }
                     }
                     else
@@ -120,11 +147,11 @@ namespace Wake
 
         internal void ProcessOutgoingEvents()
         {
-            if (_proxys == null) return;
-            foreach (var k in _proxys.Keys)
+            if (_proxySenders == null) return;
+            foreach (var k in _proxySenders.Keys)
             {
-                if (_proxys[k].SendQueueCount <= 0) continue;
-                Send(_proxys[k].PopMessageFromQueue(), _proxys[k].ChannelId, k, -1); // <---- TODO way to hanlde connection ids
+                if (_proxySenders[k].SendQueueCount <= 0) continue;
+                Send(_proxySenders[k].PopMessageFromQueue(), _proxySenders[k].ChannelId, k, -1); // <---- TODO way to hanlde connection ids
             }
 
             foreach (var key in _clients.Keys)
@@ -133,58 +160,56 @@ namespace Wake
 
         #endregion
 
-        #region Explicit Interface Implementation
-
-        private Dictionary<string, IProxy> _proxys;
-        internal int ProxyCount => _proxys == null ? 0 : _proxys.Count;
-
-        internal IProxy GetProxyAtIndex(int index)
+        public ProxySender<TMessage> AddProxySender<TMessage>(string proxyId, int channelId) where TMessage : MessageBase
         {
-            if (_proxys == null) return null;
-            if (_proxys.Count == 0) return null;
-            return _proxys.Values.ElementAt(index);
+            if (_proxySenders.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy sender with ID - {0} already registered", proxyId));
+            _proxySenders.Add(proxyId, new ProxySender<TMessage>(channelId, true));
+            return (ProxySender<TMessage>)_proxySenders[proxyId];
         }
-        
-        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(string proxyId, int channelId) where TInMessage : MessageBase where TOutMessage : MessageBase
-        {
-            if (_proxys == null) _proxys = new Dictionary<string, IProxy>();
-            if (_proxys.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy with ID - {0} already registered", proxyId));
 
-            _proxys.Add(proxyId, new Proxy<TInMessage, TOutMessage>(channelId, true));
-            return (Proxy<TInMessage, TOutMessage>)_proxys[proxyId];
+        public void RemoveProxySender(string proxyId)
+        {
+            if (!_proxySenders.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy sender with ID - {0} not registered", proxyId));
+            _proxySenders.Remove(proxyId);
+        }
+
+        public ProxyReceiver<TMessage> AddProxyReceiver<TMessage>(string proxyId, int channelId) where TMessage : MessageBase
+        {
+            if (_proxyReceivers.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy receiver with ID - {0} already registered", proxyId));
+            _proxyReceivers.Add(proxyId, new ProxyReceiver<TMessage>(channelId, true));
+            return (ProxyReceiver<TMessage>)_proxyReceivers[proxyId];
+        }
+
+        public void RemoveProxyReceiver(string proxyId)
+        {
+            if (!_proxyReceivers.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy receiver with ID - {0} not registered", proxyId));
+            _proxyReceivers.Remove(proxyId);
+        }
+
+        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(string proxyId, int channelId)
+            where TInMessage : MessageBase where TOutMessage : MessageBase
+        {
+            if (_proxySenders.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy sender with ID - {0} already registered", proxyId));
+            if (_proxyReceivers.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy receiver with ID - {0} already registered", proxyId));
+
+            var proxy = new Proxy<TInMessage, TOutMessage>(channelId, true);
+            _proxySenders.Add(proxyId, proxy);
+            _proxyReceivers.Add(proxyId, proxy);
+            return proxy;
         }
 
         public void RemoveProxy(string proxyId)
         {
-            if (_proxys == null) return;
-            if (!_proxys.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy with ID - {0} not registered", proxyId));
-            _proxys.Remove(proxyId);
+            if (!_proxySenders.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy sender with ID - {0} not registered", proxyId));
+            if (!_proxyReceivers.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy receiver with ID - {0} not registered", proxyId));
+            _proxySenders.Remove(proxyId);
+            _proxyReceivers.Remove(proxyId);
         }
-
-        public void Send(byte[] data, int channelId, string proxyId, int connectionId)
-        {
-            WakeNet.Log($"WakeServer:{Socket}:Send()");
-            var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
-            {
-                Data = data,
-                ProxyId = proxyId,
-                Server = true
-            }, true));
-            byte error;
-            if (connectionId >= 0)
-                NetworkTransport.Send(Socket, connectionId, channelId, packet, packet.Length, out error);
-            else
-            {
-                NetworkTransport.StartSendMulticast(Socket, channelId, data, data.Length, out error);
-
-                foreach (var client in _clients.Keys)
-                    NetworkTransport.SendMulticast(Socket, client, out error);
-
-                NetworkTransport.FinishSendMulticast(Socket, out error);
-            }
-            if (error > 0) Error = error;
-        }
-
-        #endregion
     }
 }

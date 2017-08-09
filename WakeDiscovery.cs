@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using Helper;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -43,14 +42,17 @@ namespace Wake
         public bool IsBroadcasting { get; private set; }
         public bool IsSearching { get; private set; }
 
-        public ReadOnlyCollection<Result> FoundGames => new ReadOnlyCollection<Result>(_foundGames.Values.ToList());
+        public ReadOnlyCollection<Result> FoundGames
+        {
+            get { return new ReadOnlyCollection<Result>(_foundGames.Values.ToList()); }
+        }
 
         public void Broadcast(string broadcastMessage)
         {
             if (IsBroadcasting) return;
 
             Socket = NetworkTransport.AddHost(_hostTopology);
-            WakeNet.Log($"WakeDiscovery:{Socket}:Broadcast()");
+            WakeNet.Log(string.Format("WakeDiscovery:{0}:Broadcast()", Socket));
             WakeNet.RegisterSocket(Socket);
 
             var sendInfo = new GameResult
@@ -72,7 +74,7 @@ namespace Wake
             if (IsSearching) return;
 
             Socket = NetworkTransport.AddHost(_hostTopology, _port);
-            WakeNet.Log($"WakeDiscovery:{Socket}:Search()");
+            WakeNet.Log(string.Format("WakeDiscovery:{0}:Search()", Socket));
             WakeNet.RegisterSocket(Socket);
 
             byte error;
@@ -83,7 +85,7 @@ namespace Wake
 
         public void Shutdown()
         {
-            WakeNet.Log($"WakeDiscovery:{Socket}:Shutdown()");
+            WakeNet.Log(string.Format("WakeDiscovery:{0}:Shutdown()", Socket));
             if (IsBroadcasting)
             {
                 NetworkTransport.StopBroadcastDiscovery();

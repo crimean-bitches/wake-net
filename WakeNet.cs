@@ -3,7 +3,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Helper;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -47,9 +47,9 @@ namespace Wake
         {
             while (Initialized)
             {
-                var ts = GameTime.Now;
+                var ts = Time.unscaledTime;
                 PollEvents();
-                _executeTime = GameTime.Now - ts;
+                _executeTime = Time.unscaledTime - ts;
                 yield return new WaitForSeconds(1f / _config.ReceiveRate - _executeTime);
             }
         }
@@ -67,15 +67,18 @@ namespace Wake
             var buffer = new byte[_config.ConnectionConfig.PacketSize];
             byte error;
 
-            NetworkEventType networkEvent;
+            NetworkEventType networkEvent = NetworkEventType.DataEvent;
             // Process network events for n clients and n servers
-            do
+            while (Initialized && networkEvent != NetworkEventType.Nothing)
             {
                 var i = -1; // Index for WakeObject in collections to process
 
-                networkEvent = NetworkTransport.Receive(out recHostId, out connectionId, out channelId, buffer,
-                    _config.ConnectionConfig.PacketSize, out dataSize, out error);
+                networkEvent = NetworkTransport.Receive(out recHostId, out connectionId, out channelId, buffer, _config.ConnectionConfig.PacketSize, out dataSize, out error);
 
+                // dont call nothing to servers and clients
+                if(networkEvent == NetworkEventType.Nothing) continue;
+
+                // log current event
                 Log(networkEvent);
 
                 // Route message to our server delegate
@@ -90,12 +93,11 @@ namespace Wake
                 // Route message to our broadcast delegate
                 for (var d = 0; d < _discoveries.Count; d++)
                     _discoveries[d].ProcessIncomingEvent(networkEvent, connectionId, channelId, buffer, dataSize);
+            }
 
-                // invoke handler which allows to send all waiting data on server and client sides
-                for (var c = 0; c < _clients.Count; c++) _clients[c].ProcessOutgoingEvents();
-                for (var s = 0; s < _servers.Count; s++) _servers[s].ProcessOutgoingEvents();
-
-            } while (Initialized && networkEvent != NetworkEventType.Nothing);
+            // invoke handler which allows to send all waiting data on server and client sides
+            for (var c = 0; c < _clients.Count; c++) _clients[c].ProcessOutgoingEvents();
+            for (var s = 0; s < _servers.Count; s++) _servers[s].ProcessOutgoingEvents();
         }
 
         #endregion
@@ -106,12 +108,20 @@ namespace Wake
         public static bool Initialized { get; private set; }
 
         // Wake elements accessors
-        public static ReadOnlyCollection<WakeServer> Servers => new ReadOnlyCollection<WakeServer>(_servers);
+        public static ReadOnlyCollection<WakeServer> Servers
+        {
+            get { return new ReadOnlyCollection<WakeServer>(_servers); }
+        }
 
-        public static ReadOnlyCollection<WakeClient> Clients => new ReadOnlyCollection<WakeClient>(_clients);
+        public static ReadOnlyCollection<WakeClient> Clients
+        {
+            get { return new ReadOnlyCollection<WakeClient>(_clients); }
+        }
 
-        public static ReadOnlyCollection<WakeDiscovery> Discoveries =>
-            new ReadOnlyCollection<WakeDiscovery>(_discoveries);
+        public static ReadOnlyCollection<WakeDiscovery> Discoveries
+        {
+            get { return new ReadOnlyCollection<WakeDiscovery>(_discoveries); }
+        }
 
         // Lists to hold our clients, servers and discoveries
         private static readonly List<int> _sockets = new List<int>();
@@ -130,9 +140,9 @@ namespace Wake
             if (Initialized) return;
             _config = config ?? WakeNetConfig.Default;
 
-            Network.logLevel = _config.LogLevel;
             Instance.Start();
             NetworkTransport.Init(_config.GlobalConfig);
+            Network.logLevel = _config.LogLevel;
             Initialized = true;
         }
 
@@ -296,12 +306,12 @@ namespace Wake
             int socket;
 
             var ht = new HostTopology(_config.ConnectionConfig, maxConnections);
+            Log("ChannelConfig : " + JsonUtility.ToJson(ht));
             if (websocket)
             {
                 Log(WakeError.NotImplemented);
                 return -1;
             }
-
             socket = NetworkTransport.AddHost(ht);
 
             if (!IsValidSocketToCreate(socket))
@@ -327,6 +337,7 @@ namespace Wake
             int socket;
 
             var ht = new HostTopology(_config.ConnectionConfig, maxConnections);
+            Log("ChannelConfig : " + JsonUtility.ToJson(ht));
             if (websocket)
             {
                 Log(WakeError.NotImplemented);
@@ -396,18 +407,24 @@ namespace Wake
             if (action != null) action();
         }
 
-        internal static void Log(object message)
+        internal static void Log(object message, NetworkLogLevel messageLogLevel = NetworkLogLevel.Full)
         {
+            if(_config.LogLevel <= 0) return;
+            if(_config.LogLevel < messageLogLevel) return;
             Debug.Log(message);
         }
 
-        internal static void Log(string message)
+        internal static void Log(string message, NetworkLogLevel messageLogLevel = NetworkLogLevel.Full)
         {
+            if (_config.LogLevel <= 0) return;
+            if (_config.LogLevel < messageLogLevel) return;
             Debug.Log(message);
         }
 
-        internal static void Log(string message, params object[] args)
+        internal static void Log(string message, NetworkLogLevel messageLogLevel = NetworkLogLevel.Full, params object[] args)
         {
+            if (_config.LogLevel <= 0) return;
+            if (_config.LogLevel < messageLogLevel) return;
             Debug.LogFormat(message, args);
         }
 
