@@ -15,8 +15,7 @@ namespace Wake
     public sealed class WakeDiscovery : WakeObject
     {
         private readonly Dictionary<string, Result> _foundGames = new Dictionary<string, Result>();
-
-        private readonly HostTopology _hostTopology;
+        
         private readonly int _key;
         private readonly int _port;
         private readonly int _subversion;
@@ -27,11 +26,7 @@ namespace Wake
         public WakeDiscovery(int port, int key, int version, int subversion, float interval = 1f)
         {
             WakeNet.Log("WakeDiscovery::Ctor()");
-
-            var connectionConfig = new ConnectionConfig();
-            connectionConfig.AddChannel(QosType.Unreliable);
-            _hostTopology = new HostTopology(connectionConfig, 1);
-
+            
             _port = port;
             _key = key;
             _version = version;
@@ -51,7 +46,7 @@ namespace Wake
         {
             if (IsBroadcasting) return;
 
-            Socket = NetworkTransport.AddHost(_hostTopology);
+            Socket = WakeNet.AddSocket(1);
             WakeNet.Log(string.Format("WakeDiscovery:{0}:Broadcast()", Socket));
             WakeNet.RegisterSocket(Socket);
 
@@ -73,7 +68,7 @@ namespace Wake
         {
             if (IsSearching) return;
 
-            Socket = NetworkTransport.AddHost(_hostTopology, _port);
+            Socket = WakeNet.AddSocket(1, _port);
             WakeNet.Log(string.Format("WakeDiscovery:{0}:Search()", Socket));
             WakeNet.RegisterSocket(Socket);
 

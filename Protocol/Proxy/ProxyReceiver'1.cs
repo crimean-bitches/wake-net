@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Text;
+using UnityEngine;
 using Wake.Protocol.Proxy.Interfaces;
 
 namespace Wake.Protocol.Proxy
@@ -8,7 +9,7 @@ namespace Wake.Protocol.Proxy
         public bool Server { get; private set; }
         public int ChannelId { get; private set; }
 
-        public event Action<TMessage, int> Received; 
+        public event ProxyReceivedHandler<TMessage> Received; 
 
         public ProxyReceiver(int channelId, bool server)
         {
@@ -18,7 +19,10 @@ namespace Wake.Protocol.Proxy
 
         public void ReceivedInternal(byte[] rawMessage, int connectionId)
         {
-            throw new System.NotImplementedException();
+            var message = JsonUtility.FromJson<TMessage>(Encoding.UTF8.GetString(rawMessage));
+            if(message == null) return;
+            if(Received == null) return;
+            Received(message, connectionId);
         }
     }
 }

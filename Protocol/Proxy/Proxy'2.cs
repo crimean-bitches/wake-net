@@ -21,7 +21,7 @@ namespace Wake.Protocol.Proxy
             get { return _sender.SendQueueCount; }
         }
 
-        public event Action<TInMessage, int> Received; 
+        public event ProxyReceivedHandler<TInMessage> Received; 
 
         public Proxy(int channelId, bool server)
         {
@@ -58,6 +58,5 @@ namespace Wake.Protocol.Proxy
         {
             if (Received != null) Received(message, connectionId);
         }
-
     }
 }
