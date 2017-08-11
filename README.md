@@ -8,8 +8,8 @@ Wake Net TODO
 - [X] Stable message exchange
 - [X] Proxy's
 - [X] Compose Client and NetClient to single class
-- [ ] Server-side client connection/disconnection event (server side client)
-- [ ] Server-side message handling (not to server side client)
+- [X] Server-side client connection/disconnection event (server side client)
+- [X] Server-side message handling (not to server side client)
 - [X] Network discovery support for server
 - [X] Single Access Point (make NetManager public for some cases)
 - [X] Initialization Configuration
