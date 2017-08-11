@@ -42,7 +42,7 @@ namespace Wake
             get { return new ReadOnlyCollection<Result>(_foundGames.Values.ToList()); }
         }
 
-        public void Broadcast(string broadcastMessage, int port)
+        public void Broadcast(string broadcastMessage, int serverPort)
         {
             if (IsBroadcasting) return;
 
@@ -54,7 +54,7 @@ namespace Wake
             {
                 DeviceId = SystemInfo.deviceUniqueIdentifier,
                 Message = broadcastMessage,
-                Port = port
+                Port = serverPort
             };
 
             var data = Encoding.UTF8.GetBytes(JsonUtility.ToJson(sendInfo, true));
