@@ -1,4 +1,4 @@
-﻿namespace Wake.Protocol.Proxy.Messages
+﻿namespace Wake.Protocol.Messages
 {
     public class EmptyMessage : MessageBase
     {

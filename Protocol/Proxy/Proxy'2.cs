@@ -1,58 +1,62 @@
 ﻿#region Usings
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using UnityEngine;
+using Wake.Protocol.Messages;
 using Wake.Protocol.Proxy.Interfaces;
-using Wake.Protocol.Proxy.Messages;
 
 #endregion
 
 namespace Wake.Protocol.Proxy
 {
-    public sealed class Proxy<TInMessage, TOutMessage> : IProxy
-        where TInMessage : MessageBase where TOutMessage : MessageBase
+    public sealed class Proxy<TInMessage, TOutMessage> : IProxy where TInMessage : MessageBase where TOutMessage : MessageBase
     {
-        private readonly Queue<byte[]> _sendQueue;
+        public bool Server { get; private set; }
+        public int ChannelId { get; private set; }
 
-        internal Proxy(int channelId)
+        private ProxySender<TOutMessage> _sender;
+        private ProxyReceiver<TInMessage> _receiver;
+
+        public int SendQueueCount
         {
+            get { return _sender.SendQueueCount; }
+        }
+
+        public event ProxyReceivedHandler<TInMessage> Received; 
+
+        public Proxy(int channelId, bool server)
+        {
+            _sender = new ProxySender<TOutMessage>(channelId, server);
+            _receiver = new ProxyReceiver<TInMessage>(channelId, server);
+
             ChannelId = channelId;
-            _sendQueue = new Queue<byte[]>();
+            Server = server;
+
+            _receiver.Received += ReceivedInvokation;
         }
 
-        public int ChannelId { get; }
-
-        public int SendQueueCount => _sendQueue.Count;
-
-        public event Action<TInMessage> Received;
-
-        public void Send(TOutMessage message)
+        public void ReceivedInternal(byte[] rawMessage, int connectionId)
         {
-            SendInternal(message);
+            _receiver.ReceivedInternal(rawMessage, connectionId);
         }
-
-        #region Implicit Interface Implementation
-
-        public int ConnectionId { get; set; }
 
         public byte[] PopMessageFromQueue()
         {
-            return _sendQueue.Dequeue();
+            return _sender.PopMessageFromQueue();
         }
 
-        public void ReceivedInternal(byte[] rawMessage)
+        public void Send(TOutMessage message)
         {
-            var message = JsonUtility.FromJson<TInMessage>(Encoding.UTF8.GetString(rawMessage));
-            if (Received != null) Received(message);
+            _sender.Send(message);
         }
 
-        public void SendInternal(MessageBase message)
+        void IProxySender.Send(MessageBase message)
         {
-            _sendQueue.Enqueue(Encoding.UTF8.GetBytes(JsonUtility.ToJson(message)));
+            _sender.Send(message);
         }
-
-        #endregion
+        
+        private void ReceivedInvokation(TInMessage message, int connectionId)
+        {
+            if (Received != null) Received(message, connectionId);
+        }
     }
 }

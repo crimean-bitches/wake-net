@@ -2,35 +2,22 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using Wake.Protocol.Internal;
 using Wake.Protocol.Proxy;
 using Wake.Protocol.Proxy.Interfaces;
-using MessageBase = Wake.Protocol.Proxy.Messages.MessageBase;
+using MessageBase = Wake.Protocol.Messages.MessageBase;
 
 #endregion
 
 namespace Wake
 {
-    public sealed class WakeClient : WakeObject, IProxyHandler
+    public sealed class WakeClient : WakeObject
     {
-        internal WakeClient()
-        {
-            WakeNet.Log("WakeClient::Ctor()");
-            // require single connection
-            Socket = WakeNet.AddSocket(1);
-        }
-
-        internal WakeClient(int socket, int connectionId)
-        {
-            WakeNet.Log("WakeClient::Ctor()");
-            Socket = socket;
-            ConnectionId = connectionId;
-            IsConnected = true;
-        }
+        private readonly Dictionary<string, IProxySender> _proxySenders;
+        private readonly Dictionary<string, IProxyReceiver> _proxyReceivers;
 
         public int Port { get; private set; }
         public string Host { get; private set; }
@@ -40,22 +27,32 @@ namespace Wake
         public event Action Disconnected;
         public event Action<byte[], int> DataReceived;
 
-        public void Send(byte[] data, int channelId, ushort proxyId = 0)
+        internal WakeClient()
         {
-            WakeNet.Log($"WakeClient:{Socket}:Send()");
-            var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
-            {
-                Data = data,
-                ProxyId = proxyId
-            }, true));
-            byte error;
-            NetworkTransport.Send(Socket, ConnectionId, channelId, packet, packet.Length, out error);
-            if (error > 0) Error = error;
+            WakeNet.Log("WakeClient::Ctor()");
+
+            _proxySenders = new Dictionary<string, IProxySender>();
+            _proxyReceivers = new Dictionary<string, IProxyReceiver>();
+
+            // require single connection
+            Socket = WakeNet.AddSocket(1);
+        }
+
+        internal WakeClient(int socket, int connectionId)
+        {
+            WakeNet.Log("WakeClient::Ctor()");
+
+            _proxySenders = new Dictionary<string, IProxySender>();
+            _proxyReceivers = new Dictionary<string, IProxyReceiver>();
+
+            Socket = socket;
+            ConnectionId = connectionId;
+            IsConnected = true;
         }
 
         public void Connect(string host, int port)
         {
-            WakeNet.Log($"WakeClient:{Socket}:Connect()");
+            WakeNet.Log(string.Format("WakeClient:{0}:Connect()", Socket));
             byte error;
             ConnectionId = NetworkTransport.Connect(Socket, host, port, 0, out error);
             if (error > 0)
@@ -72,7 +69,7 @@ namespace Wake
 
         public void Disconnect()
         {
-            WakeNet.Log($"WakeClient:{Socket}:Disconnect()");
+            WakeNet.Log(string.Format("WakeClient:{0}:Disconnect()", Socket));
             if (!IsConnected)
             {
                 WakeNet.Log(WakeError.NotConnected);
@@ -84,35 +81,48 @@ namespace Wake
             if (error > 0) Error = error;
         }
 
-        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId,
-            byte[] buffer, int dataSize)
+        public void Send(byte[] data, int channelId, string proxyId, bool server)
+        {
+            var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
+            {
+                Data = data,
+                ProxyId = proxyId,
+                Server = server
+            }, true));
+            WakeNet.Log(string.Format("WakeClient:{0}:Send()\n{1}", Socket, Encoding.UTF8.GetString(packet)));
+            byte error;
+            NetworkTransport.Send(Socket, ConnectionId, channelId, packet, packet.Length, out error);
+            if (error > 0) Error = error;
+        }
+
+        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId, byte[] buffer, int dataSize)
         {
             switch (netEvent)
             {
                 case NetworkEventType.ConnectEvent:
                     if (Connected != null) Connected();
-                    WakeNet.Log($"Client|{Socket}| connected.");
+                    WakeNet.Log(string.Format("Client[{0}] - connected.", ConnectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (Disconnected != null) Disconnected();
-                    WakeNet.Log($"Client|{Socket}| disconnected.");
+                    WakeNet.Log(string.Format("Client[{0}] - disconnected.", ConnectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DataEvent:
                     var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, dataSize));
-                    if (packet.ProxyId == 0)
+                    if (string.IsNullOrEmpty(packet.ProxyId))
                     {
                         // handle raw packages
                         if (DataReceived != null) DataReceived(packet.Data, channelId);
                     }
-                    else if (_proxys.ContainsKey(packet.ProxyId))
+                    else if (_proxyReceivers.ContainsKey(packet.ProxyId))
                     {
                         // pass data to proxy, it'll deserialize it to proper type
                         // and fires own event
-                        _proxys[packet.ProxyId].ReceivedInternal(packet.Data);
+                        _proxyReceivers[packet.ProxyId].ReceivedInternal(packet.Data, connectionId);
                     }
                     else
                     {
-                        WakeNet.Log("Unsupported or not registered proxy type : {0}", packet.ProxyId);
+                        WakeNet.Log(string.Format("Unsupported or not registered proxy type : {0}", packet.ProxyId), NetworkLogLevel.Informational);
                     }
                     break;
             }
@@ -120,45 +130,63 @@ namespace Wake
 
         internal void ProcessOutgoingEvents()
         {
-            if (_proxys == null) return;
-            foreach (var k in _proxys.Keys)
+            foreach (var k in _proxySenders.Keys)
             {
-                if (_proxys[k].SendQueueCount <= 0) continue;
-                Send(_proxys[k].PopMessageFromQueue(), _proxys[k].ChannelId, k);
+                if (_proxySenders[k].SendQueueCount <= 0) continue;
+                Send(_proxySenders[k].PopMessageFromQueue(), _proxySenders[k].ChannelId, k, _proxySenders[k].Server);
             }
         }
 
-        #region Explicit Interface Implementation
-
-        internal int ProxyCount => _proxys == null ? 0 : _proxys.Count;
-
-        internal IProxy GetProxyAtIndex(int index)
+        public ProxySender<TMessage> AddProxySender<TMessage>(string proxyId, int channelId, bool server) where TMessage : MessageBase
         {
-            if (_proxys == null) return null;
-            if (_proxys.Count == 0) return null;
-            return _proxys.Values.ElementAt(index);
+            if (_proxySenders.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy sender with ID - {0} already registered", proxyId));
+            _proxySenders.Add(proxyId, new ProxySender<TMessage>(channelId, server));
+            return (ProxySender<TMessage>)_proxySenders[proxyId];
         }
 
-        private Dictionary<ushort, IProxy> _proxys;
+        public void RemoveProxySender(string proxyId)
+        {
+            if (!_proxySenders.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy sender with ID - {0} not registered", proxyId));
+            _proxySenders.Remove(proxyId);
+        }
 
-        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(ushort proxyId, int channelId)
+        public ProxyReceiver<TMessage> AddProxyReceiver<TMessage>(string proxyId, int channelId, bool server) where TMessage : MessageBase
+        {
+            if (_proxyReceivers.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy receiver with ID - {0} already registered", proxyId));
+            _proxyReceivers.Add(proxyId, new ProxyReceiver<TMessage>(channelId, server));
+            return (ProxyReceiver<TMessage>)_proxyReceivers[proxyId];
+        }
+
+        public void RemoveProxyReceiver(string proxyId)
+        {
+            if (!_proxyReceivers.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy receiver with ID - {0} not registered", proxyId));
+            _proxyReceivers.Remove(proxyId);
+        }
+
+        public Proxy<TInMessage, TOutMessage> AddProxy<TInMessage, TOutMessage>(string proxyId, int channelId, bool server)
             where TInMessage : MessageBase where TOutMessage : MessageBase
         {
-            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
-            if (_proxys.ContainsKey(proxyId))
-                throw new Exception(string.Format("Proxy with ID - {0} already registered", proxyId));
-            _proxys.Add(proxyId, new Proxy<TInMessage, TOutMessage>(channelId));
-            return (Proxy<TInMessage, TOutMessage>) _proxys[proxyId];
+            if (_proxySenders.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy sender with ID - {0} already registered", proxyId));
+            if (_proxyReceivers.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy receiver with ID - {0} already registered", proxyId));
+
+            var proxy = new Proxy<TInMessage, TOutMessage>(channelId, server);
+            _proxySenders.Add(proxyId, proxy);
+            _proxyReceivers.Add(proxyId, proxy);
+            return proxy;
         }
 
-        public void RemoveProxy(ushort proxyId)
+        public void RemoveProxy(string proxyId)
         {
-            if (_proxys == null) _proxys = new Dictionary<ushort, IProxy>();
-            if (!_proxys.ContainsKey(proxyId))
-                throw new Exception(string.Format("Proxy with ID - {0} not registered", proxyId));
-            _proxys.Remove(proxyId);
+            if (!_proxySenders.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy sender with ID - {0} not registered", proxyId));
+            if (!_proxyReceivers.ContainsKey(proxyId)) throw new Exception(
+                string.Format("Proxy receiver with ID - {0} not registered", proxyId));
+            _proxySenders.Remove(proxyId);
+            _proxyReceivers.Remove(proxyId);
         }
-
-        #endregion
     }
 }
