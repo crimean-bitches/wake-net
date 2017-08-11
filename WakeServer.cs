@@ -25,6 +25,7 @@ namespace Wake
         private readonly int _port;
         
         public int ClientCount { get { return _clients.Count; } }
+        public int Port { get { return _port; } }
 
         public event Action<WakeClient> ClientConnected;
         public event Action<WakeClient> ClientDisconnected;

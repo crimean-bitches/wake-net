@@ -42,7 +42,7 @@ namespace Wake
             get { return new ReadOnlyCollection<Result>(_foundGames.Values.ToList()); }
         }
 
-        public void Broadcast(string broadcastMessage)
+        public void Broadcast(string broadcastMessage, int port)
         {
             if (IsBroadcasting) return;
 
@@ -53,13 +53,13 @@ namespace Wake
             var sendInfo = new GameResult
             {
                 DeviceId = SystemInfo.deviceUniqueIdentifier,
-                Message = broadcastMessage
+                Message = broadcastMessage,
+                Port = port
             };
 
             var data = Encoding.UTF8.GetBytes(JsonUtility.ToJson(sendInfo, true));
             byte error;
-            NetworkTransport.StartBroadcastDiscovery(Socket, _port, _key, _version, _subversion, data, data.Length,
-                1000, out error);
+            NetworkTransport.StartBroadcastDiscovery(Socket, _port, _key, _version, _subversion, data, data.Length, 1000, out error);
             if (error > 0) Error = error;
             else IsBroadcasting = true;
         }
@@ -118,19 +118,17 @@ namespace Wake
 
             if (!_foundGames.ContainsKey(gameResult.DeviceId))
             {
-                _foundGames.Add(gameResult.DeviceId, new Result {Host = host, Port = port, GameResult = gameResult});
+                _foundGames.Add(gameResult.DeviceId, new Result { Host = host, Port = gameResult.Port, GameResult = gameResult });
                 _foundGames[gameResult.DeviceId].Routine = WakeNet.InvokeAt(() => { _foundGames.Remove(gameResult.DeviceId); }, Time.unscaledTime + _interval * 2);
             }
             else
             {
                 _foundGames[gameResult.DeviceId].Host = host;
-                _foundGames[gameResult.DeviceId].Port = port;
+                _foundGames[gameResult.DeviceId].Port = gameResult.Port;
                 _foundGames[gameResult.DeviceId].GameResult.Message = gameResult.Message;
                 WakeNet.StopRoutine(_foundGames[gameResult.DeviceId].Routine);
                 _foundGames[gameResult.DeviceId].Routine = WakeNet.InvokeAt(() => { _foundGames.Remove(gameResult.DeviceId); }, Time.unscaledTime + _interval * 2);
             }
-
-            var key = gameResult.DeviceId;
         }
         
         public sealed class Result
@@ -146,6 +144,7 @@ namespace Wake
         {
             public string DeviceId;
             public string Message;
+            public int Port;
         }
     }
 }

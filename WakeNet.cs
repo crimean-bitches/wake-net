@@ -409,7 +409,6 @@ namespace Wake
 
         internal static void Log(object message, NetworkLogLevel messageLogLevel = NetworkLogLevel.Full)
         {
-            if(_config.LogLevel <= 0) return;
             if(_config.LogLevel < messageLogLevel) return;
             Debug.Log(message);
         }
