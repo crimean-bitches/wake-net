@@ -108,6 +108,7 @@ namespace Wake
                     WakeNet.Log(string.Format("Client[{0}] - disconnected.", ConnectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DataEvent:
+                    WakeNet.Log("Client[{0}] - Packet :\n{1}", NetworkLogLevel.Full, ConnectionId, Encoding.UTF8.GetString(buffer, 0, dataSize));
                     var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, dataSize));
                     if (string.IsNullOrEmpty(packet.ProxyId))
                     {
@@ -133,7 +134,9 @@ namespace Wake
             foreach (var k in _proxySenders.Keys)
             {
                 if (_proxySenders[k].SendQueueCount <= 0) continue;
-                Send(_proxySenders[k].PopMessageFromQueue(), _proxySenders[k].ChannelId, k, _proxySenders[k].Server);
+                var m = _proxySenders[k].PopMessageFromQueue();
+                Send(m, _proxySenders[k].ChannelId, k, _proxySenders[k].Server);
+                WakeNet.Log("Proxy[{0}] (Client) - Send :\n{1}", NetworkLogLevel.Full, k, Encoding.UTF8.GetString(m));
             }
         }
 
