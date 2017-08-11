@@ -90,8 +90,7 @@ namespace Wake
                 IsSearching = false;
         }
 
-        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId,
-            byte[] buffer, int dataSize)
+        internal override void ProcessIncomingEvent(NetworkEventType netEvent, int connectionId, int channelId, byte[] buffer, int dataSize)
         {
             if (netEvent != NetworkEventType.BroadcastEvent) return;
 
