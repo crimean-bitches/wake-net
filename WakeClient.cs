@@ -83,13 +83,13 @@ namespace Wake
 
         public void Send(byte[] data, int channelId, string proxyId, bool server)
         {
-            var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
+            var packet = WakeNet.Serialize(new Packet
             {
                 Data = data,
                 ProxyId = proxyId,
                 Server = server
-            }, true));
-            WakeNet.Log(string.Format("WakeClient:{0}:Send()\n{1}", Socket, Encoding.UTF8.GetString(packet)));
+            });
+            WakeNet.Log(string.Format("WakeClient:{0}:Send() - {1}b", Socket, packet.Length));
             byte error;
             NetworkTransport.Send(Socket, ConnectionId, channelId, packet, packet.Length, out error);
             if (error > 0) Error = error;
@@ -108,8 +108,8 @@ namespace Wake
                     WakeNet.Log(string.Format("Client[{0}] - disconnected.", ConnectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DataEvent:
-                    WakeNet.Log("Client[{0}] - Packet :\n{1}", NetworkLogLevel.Full, ConnectionId, Encoding.UTF8.GetString(buffer, 0, dataSize));
-                    var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, dataSize));
+                    WakeNet.Log("Client[{0}] - Packet : {1}b", NetworkLogLevel.Full, ConnectionId, dataSize);
+                    var packet = WakeNet.Deserialzie<Packet>(buffer, 0, dataSize);
                     if (string.IsNullOrEmpty(packet.ProxyId))
                     {
                         // handle raw packages
@@ -136,7 +136,7 @@ namespace Wake
                 if (_proxySenders[k].SendQueueCount <= 0) continue;
                 var m = _proxySenders[k].PopMessageFromQueue();
                 Send(m, _proxySenders[k].ChannelId, k, _proxySenders[k].Server);
-                WakeNet.Log("Proxy[{0}] (Client) - Send :\n{1}", NetworkLogLevel.Full, k, Encoding.UTF8.GetString(m));
+                WakeNet.Log("Proxy[{0}] (Client) - Send : {1}b", NetworkLogLevel.Full, k, m.Length);
             }
         }
 

@@ -32,7 +32,7 @@ namespace Wake.Protocol.Proxy
 
         public void Send(MessageBase message)
         {
-            _queue.Enqueue(Encoding.UTF8.GetBytes(JsonUtility.ToJson(message)));
+            _queue.Enqueue(WakeNet.Serialize(message));
         }
     }
 }

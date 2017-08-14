@@ -1,5 +1,8 @@
-﻿namespace Wake.Protocol.Messages
+﻿using System;
+
+namespace Wake.Protocol.Messages
 {
+    [Serializable]
     public abstract class DataMessage<T> : MessageBase
     {
         public T Data;

@@ -375,6 +375,16 @@ namespace Wake
             _sockets.Remove(socket);
         }
 
+        internal static byte[] Serialize(object data)
+        {
+            return _config.Serialzier.Serialize(data);
+        }
+
+        internal static T Deserialzie<T>(byte[] data, int offset, int length)
+        {
+            return _config.Serialzier.Deserialize<T>(data, offset, length);
+        }
+
         #endregion
 
         #region Internal Utils

@@ -19,7 +19,7 @@ namespace Wake.Protocol.Proxy
 
         public void ReceivedInternal(byte[] rawMessage, int connectionId)
         {
-            var message = JsonUtility.FromJson<TMessage>(Encoding.UTF8.GetString(rawMessage));
+            var message = WakeNet.Deserialzie<TMessage>(rawMessage, 0, rawMessage.Length);
             if (message == null) return;
             if(Received == null) return;
             Received(message, connectionId);

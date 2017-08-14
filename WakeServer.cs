@@ -25,6 +25,7 @@ namespace Wake
         private readonly int _port;
         
         public int ClientCount { get { return _clients.Count; } }
+        public IEnumerable<WakeClient> Clients { get { return _clients.Values; } }
         public int Port { get { return _port; } }
 
         public event Action<WakeClient> ClientConnected;
@@ -70,13 +71,13 @@ namespace Wake
 
         public void Send(byte[] data, int channelId, string proxyId, int connectionId)
         {
-            var packet = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Packet
+            var packet = WakeNet.Serialize(new Packet
             {
                 Data = data,
                 ProxyId = proxyId,
                 Server = true
-            }, true));
-            WakeNet.Log(string.Format("WakeServer:{0}:Send()\n", Socket) + Encoding.UTF8.GetString(packet));
+            });
+            WakeNet.Log(string.Format("WakeServer:{0}:Send() - {1}b", Socket, packet.Length));
             byte error = 0;
             if (connectionId >= 0)
                 NetworkTransport.Send(Socket, connectionId, channelId, packet, packet.Length, out error);
@@ -116,7 +117,7 @@ namespace Wake
                     WakeNet.Log(string.Format("Server|{0}| disconnected [{1}].", Socket, connectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DataEvent:
-                    var packet = JsonUtility.FromJson<Packet>(Encoding.UTF8.GetString(buffer, 0, dataSize));
+                    var packet = WakeNet.Deserialzie<Packet>(buffer, 0, dataSize);
                     if (packet.Server)
                     {
                         if (string.IsNullOrEmpty(packet.ProxyId))
@@ -129,7 +130,7 @@ namespace Wake
                             // pass data to proxy, it'll deserialize it to proper type
                             // and fires own event
                             _proxyReceivers[packet.ProxyId].ReceivedInternal(packet.Data, connectionId);
-                            WakeNet.Log("Proxy[{0}] (Server) - Received :\n{1}", NetworkLogLevel.Full, packet.ProxyId, Encoding.UTF8.GetString(packet.Data));
+                            WakeNet.Log("Proxy[{0}] (Server) - Received : {1}b", NetworkLogLevel.Full, packet.ProxyId, packet.Data.Length);
                         }
                         else
                         {
@@ -141,7 +142,7 @@ namespace Wake
                         if (!_clients.ContainsKey(connectionId)) throw new Exception("Data received for disconnected client.");
 
                         // pass data to client presentation on server side, it'll handle it by itself
-                        WakeNet.Log("Proxy[{0}] (Client) - Received :\n{1}", NetworkLogLevel.Full, packet.ProxyId, Encoding.UTF8.GetString(packet.Data));
+                        WakeNet.Log("Proxy[{0}] (Client) - Received : {1}b", NetworkLogLevel.Full, packet.ProxyId, packet.Data.Length);
                         _clients[connectionId].ProcessIncomingEvent(netEvent, connectionId, channelId, buffer, dataSize);
                     }
                     break;
@@ -156,7 +157,7 @@ namespace Wake
                 if (_proxySenders[k].SendQueueCount <= 0) continue;
                 var m = _proxySenders[k].PopMessageFromQueue();
                 Send(m, _proxySenders[k].ChannelId, k, -1);
-                WakeNet.Log("Proxy[{0}] (Server) - Send :\n{1}",  NetworkLogLevel.Full, k, Encoding.UTF8.GetString(m));
+                WakeNet.Log("Proxy[{0}] (Server) - Send : {1}b",  NetworkLogLevel.Full, k, m.Length);
             }
 
             foreach (var key in _clients.Keys)
