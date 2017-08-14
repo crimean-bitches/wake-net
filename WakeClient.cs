@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using Wake.Protocol.Internal;
@@ -52,9 +51,9 @@ namespace Wake
 
         public void Connect(string host, int port)
         {
-            WakeNet.Log(string.Format("WakeClient:{0}:Connect()", Socket));
             byte error;
             ConnectionId = NetworkTransport.Connect(Socket, host, port, 0, out error);
+            WakeNet.Log(string.Format("WakeClient:{0}:Connect() - {1}", Socket, ConnectionId));
             if (error > 0)
             {
                 Error = error;
