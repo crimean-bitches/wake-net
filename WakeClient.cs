@@ -132,10 +132,12 @@ namespace Wake
         {
             foreach (var k in _proxySenders.Keys)
             {
-                if (_proxySenders[k].SendQueueCount <= 0) continue;
-                var m = _proxySenders[k].PopMessageFromQueue();
-                Send(m, _proxySenders[k].ChannelId, k, _proxySenders[k].Server);
-                WakeNet.Log("Proxy[{0}] (Client) - Send : {1}b", NetworkLogLevel.Full, k, m.Length);
+                while (_proxySenders[k].SendQueueCount > 0)
+                {
+                    var m = _proxySenders[k].PopMessageFromQueue();
+                    Send(m, _proxySenders[k].ChannelId, k, _proxySenders[k].Server);
+                    WakeNet.Log("Proxy[{0}] (Client) - Send : {1}b", NetworkLogLevel.Full, k, m.Length);
+                }
             }
         }
 
