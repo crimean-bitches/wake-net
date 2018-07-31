@@ -31,6 +31,6 @@ namespace Wake
         public ISerializer Serialzier { get; private set; }
         public ConnectionConfig ConnectionConfig { get; private set; }
         public int ReceiveRate { get; private set; }
-        public NetworkLogLevel LogLevel { get; private set; }
+        public NetworkLogLevel LogLevel { get; set; }
     }
 }

@@ -329,8 +329,7 @@ namespace Wake
             return AddSocket(maxConnections, 0, 0, port, websocket);
         }
 
-        internal static int AddSocket(int maxConnections, int simMinTimeout, int simMaxTimeout, int port,
-            bool websocket = false)
+        internal static int AddSocket(int maxConnections, int simMinTimeout, int simMaxTimeout, int port, bool websocket = false)
         {
             if (!Initialized) Log(WakeError.NotInitialized);
 
@@ -347,7 +346,7 @@ namespace Wake
                 socket = NetworkTransport.AddHostWithSimulator(ht, simMinTimeout, simMaxTimeout, port);
             else
                 socket = NetworkTransport.AddHost(ht, port);
-
+            
             if (!IsValidSocketToCreate(socket))
             {
                 Log(WakeError.InvalidHostCreated);

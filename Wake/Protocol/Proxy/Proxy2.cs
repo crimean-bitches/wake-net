@@ -13,8 +13,8 @@ namespace Wake.Protocol.Proxy
         public bool Server { get; private set; }
         public int ChannelId { get; private set; }
 
-        private ProxySender<TOutMessage> _sender;
-        private ProxyReceiver<TInMessage> _receiver;
+        private readonly ProxySender<TOutMessage> _sender;
+        private readonly ProxyReceiver<TInMessage> _receiver;
 
         public int SendQueueCount
         {

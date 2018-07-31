@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using Wake.Protocol.Internal;
@@ -25,7 +24,7 @@ namespace Wake
         private readonly int _port;
         
         public int ClientCount { get { return _clients.Count; } }
-        public IEnumerable<WakeClient> Clients { get { return _clients.Values; } }
+        public IReadOnlyList<WakeClient> Clients { get { return _clients.Values.ToList().AsReadOnly(); } }
         public int Port { get { return _port; } }
 
         public event Action<WakeClient> ClientConnected;
@@ -102,7 +101,7 @@ namespace Wake
 
                     _clients.Add(connectionId, new WakeClient(Socket, connectionId));
                     if (ClientConnected != null) ClientConnected(_clients[connectionId]);
-                    WakeNet.Log(string.Format("Server|{0}| connected [{1}].", Socket, connectionId), NetworkLogLevel.Informational);
+                    WakeNet.Log(string.Format("Server[{0}] connected [{1}].", Socket, connectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (!_clients.ContainsKey(connectionId))
@@ -114,7 +113,7 @@ namespace Wake
                     if (ClientDisconnected != null) ClientDisconnected(_clients[connectionId]);
                     _clients.Remove(connectionId);
 
-                    WakeNet.Log(string.Format("Server|{0}| disconnected [{1}].", Socket, connectionId), NetworkLogLevel.Informational);
+                    WakeNet.Log(string.Format("Server[{0}] disconnected [{1}].", Socket, connectionId), NetworkLogLevel.Informational);
                     break;
                 case NetworkEventType.DataEvent:
                     var packet = WakeNet.Deserialzie<Packet>(buffer, 0, dataSize);
@@ -185,8 +184,7 @@ namespace Wake
 
         public ProxyReceiver<TMessage> AddProxyReceiver<TMessage>(string proxyId, int channelId) where TMessage : MessageBase
         {
-            if (_proxyReceivers.ContainsKey(proxyId)) throw new Exception(
-                string.Format("Proxy receiver with ID - {0} already registered", proxyId));
+            if (_proxyReceivers.ContainsKey(proxyId)) throw new Exception(string.Format("Proxy receiver with ID - {0} already registered", proxyId));
             _proxyReceivers.Add(proxyId, new ProxyReceiver<TMessage>(channelId, true));
             return (ProxyReceiver<TMessage>)_proxyReceivers[proxyId];
         }
