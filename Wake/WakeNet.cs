@@ -7,6 +7,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
+using Wake.Logger;
 
 #endregion
 
@@ -142,7 +143,7 @@ namespace Wake
 
             Instance.Start();
             NetworkTransport.Init(_config.GlobalConfig);
-            Network.logLevel = _config.LogLevel;
+            
             Initialized = true;
         }
 
@@ -416,23 +417,24 @@ namespace Wake
             if (action != null) action();
         }
 
-        internal static void Log(object message, NetworkLogLevel messageLogLevel = NetworkLogLevel.Full)
+        internal static void Log(object message, LogLevel logLevel = LogLevel.Warn)
         {
-            if(_config.LogLevel < messageLogLevel) return;
+            if(_config.LogLevel < logLevel) return;
             Debug.Log(message);
         }
 
-        internal static void Log(string message, NetworkLogLevel messageLogLevel = NetworkLogLevel.Full)
+        internal static void Log(string message, LogLevel logLevel = LogLevel.Warn)
         {
             if (_config.LogLevel <= 0) return;
-            if (_config.LogLevel < messageLogLevel) return;
+            if (_config.LogLevel < logLevel) return;
+            
             Debug.Log(message);
         }
 
-        internal static void Log(string message, NetworkLogLevel messageLogLevel = NetworkLogLevel.Full, params object[] args)
+        internal static void Log(string message, LogLevel logLevel = LogLevel.Warn, params object[] args)
         {
             if (_config.LogLevel <= 0) return;
-            if (_config.LogLevel < messageLogLevel) return;
+            if (_config.LogLevel < logLevel) return;
             Debug.LogFormat(message, args);
         }
 

@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 using Wake;
+using Wake.Logger;
 
 public class DiscoveryServer : MonoBehaviour
 {
@@ -20,7 +22,7 @@ public class DiscoveryServer : MonoBehaviour
 	IEnumerator Start ()
 	{
 	    var c = WakeNetConfig.Default;
-	    c.LogLevel = NetworkLogLevel.Full;
+	    c.LogLevel = LogLevel.Debug;
 	    WakeNet.Init(c);
 
 	    while (!WakeNet.Initialized)

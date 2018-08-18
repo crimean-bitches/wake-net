@@ -2,6 +2,7 @@
 
 using UnityEngine;
 using UnityEngine.Networking;
+using Wake.Logger;
 using Wake.Serialization;
 
 #endregion
@@ -16,7 +17,7 @@ namespace Wake
             new[] {QosType.Reliable, QosType.Unreliable, QosType.Unreliable },
             new UnityJsonSerializer());
 
-        public WakeNetConfig(GlobalConfig global, ConnectionConfig connection, QosType[] channels, ISerializer serializer, int receiveRate = 50, NetworkLogLevel logLevel = NetworkLogLevel.Informational)
+        public WakeNetConfig(GlobalConfig global, ConnectionConfig connection, QosType[] channels, ISerializer serializer, int receiveRate = 50, LogLevel logLevel = LogLevel.Warn)
         {
             GlobalConfig = global;
             ConnectionConfig = connection;
@@ -31,6 +32,6 @@ namespace Wake
         public ISerializer Serialzier { get; private set; }
         public ConnectionConfig ConnectionConfig { get; private set; }
         public int ReceiveRate { get; private set; }
-        public NetworkLogLevel LogLevel { get; set; }
+        public LogLevel LogLevel { get; set; }
     }
 }

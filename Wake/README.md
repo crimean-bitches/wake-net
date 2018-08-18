@@ -18,6 +18,7 @@ Wake Net TODO
 - [X] Thread configuration in initialization
 - [X] Global refactor
 - [ ] Custom logger
+- [ ] 2018.2 LLAPI support
 - [ ] Buffers control and reducing memory overhead
 - [ ] Profiling and optimizations
 - [ ] Websocket support

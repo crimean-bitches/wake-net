@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+using Wake.Logger;
 using Wake.Protocol.Internal;
 using Wake.Protocol.Proxy;
 using Wake.Protocol.Proxy.Interfaces;
@@ -100,14 +101,14 @@ namespace Wake
             {
                 case NetworkEventType.ConnectEvent:
                     if (Connected != null) Connected();
-                    WakeNet.Log(string.Format("Client[{0}] - connected.", ConnectionId), NetworkLogLevel.Informational);
+                    WakeNet.Log(string.Format("Client[{0}] - connected.", ConnectionId), LogLevel.Info);
                     break;
                 case NetworkEventType.DisconnectEvent:
                     if (Disconnected != null) Disconnected();
-                    WakeNet.Log(string.Format("Client[{0}] - disconnected.", ConnectionId), NetworkLogLevel.Informational);
+                    WakeNet.Log(string.Format("Client[{0}] - disconnected.", ConnectionId), LogLevel.Info);
                     break;
                 case NetworkEventType.DataEvent:
-                    WakeNet.Log("Client[{0}] - Packet : {1}b", NetworkLogLevel.Full, ConnectionId, dataSize);
+                    WakeNet.Log("Client[{0}] - Packet : {1}b", LogLevel.Debug, ConnectionId, dataSize);
                     var packet = WakeNet.Deserialzie<Packet>(buffer, 0, dataSize);
                     if (string.IsNullOrEmpty(packet.ProxyId))
                     {
@@ -122,7 +123,7 @@ namespace Wake
                     }
                     else
                     {
-                        WakeNet.Log(string.Format("Unsupported or not registered proxy type : {0}", packet.ProxyId), NetworkLogLevel.Informational);
+                        WakeNet.Log(string.Format("Unsupported or not registered proxy type : {0}", packet.ProxyId), LogLevel.Error);
                     }
                     break;
             }
@@ -136,7 +137,7 @@ namespace Wake
                 {
                     var m = _proxySenders[k].PopMessageFromQueue();
                     Send(m, _proxySenders[k].ChannelId, k, _proxySenders[k].Server);
-                    WakeNet.Log("Proxy[{0}] (Client) - Send : {1}b", NetworkLogLevel.Full, k, m.Length);
+                    WakeNet.Log("Proxy[{0}] (Client) - Send : {1}b", LogLevel.Debug, k, m.Length);
                 }
             }
         }

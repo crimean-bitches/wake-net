@@ -2,6 +2,7 @@
 using Assets.Plugins.Examples._2.Chat.Scripts.MessageTypes;
 using UnityEngine;
 using Wake;
+using Wake.Logger;
 using Wake.Protocol.Proxy;
 
 public class ChatServer : MonoBehaviour
@@ -18,7 +19,7 @@ public class ChatServer : MonoBehaviour
 	IEnumerator Start ()
 	{
 	    var c = WakeNetConfig.Default;
-	    c.LogLevel = NetworkLogLevel.Full;
+	    c.LogLevel = LogLevel.Debug;
 		WakeNet.Init(c);
 
 	    while (!WakeNet.Initialized)

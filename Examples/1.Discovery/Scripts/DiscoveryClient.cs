@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Wake;
@@ -16,10 +15,6 @@ public class DiscoveryClient : MonoBehaviour
     
     private IEnumerator Start()
     {
-        var c = WakeNetConfig.Default;
-        c.LogLevel = NetworkLogLevel.Full;
-        WakeNet.Init(c);
-
         while (!WakeNet.Initialized)
         {
             yield return new WaitForEndOfFrame();
